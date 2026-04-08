@@ -49,6 +49,7 @@ function SongRow({ song, index, isPlaying, isCurrentSong, onPlay, onLike, isLike
 
 export default function HomePage({ currentSong, isPlaying, onPlay, onLike, likedSongs, setActivePage }) {
   const [latestSongs, setLatestSongs] = useState([]);
+  const [localLib, setLocalLib] = useState([]);
   const [loadingLatest, setLoadingLatest] = useState(true);
 
   useEffect(() => {
