@@ -12,8 +12,11 @@ import SongCreatorPage from "./components/SongCreatorPage";
 import LikedSongsPage from "./components/LikedSongsPage";
 import PlaylistPage from "./components/PlaylistPage";
 import ExplorePage from "./components/ExplorePage";
-import AuthPage from "./components/AuthPage";
 import SearchPage from "./components/SearchPage";
+import AuthPage from "./components/AuthPage";
+import PodcastPage from "./components/PodcastPage";
+import CartoonPage from "./components/CartoonPage";
+import AnimePage from "./components/AnimePage";
 
 import { SONGS } from "./data/songs";
 import { authService } from "./services/authService";
@@ -241,6 +244,18 @@ export default function App() {
       case "creator":
         return (
           <SongCreatorPage onAddGenerated={handleAddGenerated} />
+        );
+      case "podcasts":
+        return (
+          <PodcastPage setIsPlaying={setIsPlaying} />
+        );
+      case "cartoons":
+        return (
+          <CartoonPage setIsPlaying={setIsPlaying} />
+        );
+      case "anime":
+        return (
+          <AnimePage setIsPlaying={setIsPlaying} />
         );
       case "liked":
         return (

@@ -150,6 +150,39 @@ export async function fetchLocalLibrary() {
   }
 }
 
+export async function fetchPodcasts() {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/podcasts/");
+    if (!res.ok) throw new Error("Podcasts API unreachable");
+    return await res.json();
+  } catch (e) {
+    console.error("Podcasts fetch error:", e);
+    return [];
+  }
+}
+
+export async function fetchCartoons() {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/cartoons/");
+    if (!res.ok) throw new Error("Cartoons API unreachable");
+    return await res.json();
+  } catch (e) {
+    console.error("Cartoons fetch error:", e);
+    return [];
+  }
+}
+
+export async function fetchAnime() {
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/anime/");
+    if (!res.ok) throw new Error("Anime API unreachable");
+    return await res.json();
+  } catch (e) {
+    console.error("Anime fetch error:", e);
+    return [];
+  }
+}
+
 export async function resolveFullAudio(title, artist) {
   try {
     const res = await fetch("http://127.0.0.1:8000/api/songs/resolve-audio/", {

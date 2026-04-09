@@ -8,6 +8,9 @@ const NAV_ITEMS = [
   { id: "library", icon: "📚", label: "Your Library" },
   { id: "mood", icon: "🧠", label: "AI Mood" },
   { id: "creator", icon: "✨", label: "AI Creator" },
+  { id: "podcasts", icon: "🎙️", label: "Podcasts" },
+  { id: "cartoons", icon: "📺", label: "Cartoons" },
+  { id: "anime", icon: "🎌", label: "Anime" },
   { id: "liked", icon: "❤️", label: "Liked Songs" },
 ];
 
