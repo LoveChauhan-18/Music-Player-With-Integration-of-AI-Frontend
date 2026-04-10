@@ -44,9 +44,11 @@ export async function fetchBollywood() {
     const results = await Promise.all([
       fetchITunes(`bollywood hindi hits ${CURRENT_YEAR}`, 100, "in"),
       fetchITunes("arijit singh latest songs", 100, "in"),
+      fetchITunes("shreya ghoshal retro hits", 100, "in"),
+      fetchITunes("punjabi pop hits", 100, "in"),
     ]);
-    const combined = [...results[0], ...results[1]];
-    return dedupe(combined).slice(0, 200);
+    const combined = [...results[0], ...results[1], ...results[2], ...results[3]];
+    return dedupe(combined).slice(0, 300);
   } catch (e) {
     console.error("Bollywood fetch error:", e);
     return [];
@@ -58,9 +60,11 @@ export async function fetchHollywood() {
     const results = await Promise.all([
       fetchITunes(`top pop hits ${CURRENT_YEAR}`, 100, "us"),
       fetchITunes(`billboard hot 100 ${CURRENT_YEAR}`, 100, "us"),
+      fetchITunes("hip hop trending", 100, "us"),
+      fetchITunes("classic rock anthems", 100, "us"),
     ]);
-    const combined = [...results[0], ...results[1]];
-    return dedupe(combined).slice(0, 200);
+    const combined = [...results[0], ...results[1], ...results[2], ...results[3]];
+    return dedupe(combined).slice(0, 300);
   } catch (e) {
     console.error("Hollywood fetch error:", e);
     return [];
@@ -72,9 +76,11 @@ export async function fetchKorean() {
     const results = await Promise.all([
       fetchITunes(`kpop hits ${CURRENT_YEAR}`, 100, "us"),
       fetchITunes("BTS blackpink new jeans aespa latest", 100, "us"),
+      fetchITunes("korean r&b indie hits", 100, "us"),
+      fetchITunes("stray kids twice txt", 100, "us"),
     ]);
-    const combined = [...results[0], ...results[1]];
-    return dedupe(combined).slice(0, 200);
+    const combined = [...results[0], ...results[1], ...results[2], ...results[3]];
+    return dedupe(combined).slice(0, 300);
   } catch (e) {
     console.error("K-Pop fetch error:", e);
     return [];
@@ -86,9 +92,11 @@ export async function fetchJapanese() {
     const results = await Promise.all([
       fetchITunes(`jpop trending anime ${CURRENT_YEAR}`, 100, "jp"),
       fetchITunes("japanese pop music hits", 100, "jp"),
+      fetchITunes("city pop classic japan", 100, "jp"),
+      fetchITunes("vocaloid covers utaite", 100, "jp"),
     ]);
-    const combined = [...results[0], ...results[1]];
-    return dedupe(combined).slice(0, 200);
+    const combined = [...results[0], ...results[1], ...results[2], ...results[3]];
+    return dedupe(combined).slice(0, 300);
   } catch (e) {
     console.error("J-Pop fetch error:", e);
     return [];
