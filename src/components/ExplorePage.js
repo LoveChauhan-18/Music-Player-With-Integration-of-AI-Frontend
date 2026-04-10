@@ -134,6 +134,11 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [searchQuery]);
 
   const cat = EXPLORE_CATEGORIES.find((c) => c.id === activeCategory);
 
@@ -160,6 +165,7 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
 
   const handleCategoryChange = (id) => {
     setActiveCategory(id);
+    setVisibleCount(20);
     loadCategory(id);
   };
 
@@ -174,6 +180,8 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
           s.artist.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : categorySongs;
+
+  const visibleSongs = filteredSongs.slice(0, visibleCount);
 
   return (
     <div className="page">
@@ -344,22 +352,36 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
 
           {/* Songs Grid */}
           {!isLoading && !error && filteredSongs.length > 0 && (
-            <div className="songs-grid">
-              {filteredSongs.map((song) => (
-                <SongCard
-                  key={song.id}
-                  song={song}
-                  isCurrentSong={currentSong?.id === song.id}
-                  isPlaying={isPlaying}
-                  onPlay={onPlay}
-                  onLike={onLike}
-                  isLiked={likedSongs.includes(song.id)}
-                  categoryColor={cat.color}
-                  playlists={playlists}
-                  onAddToPlaylist={onAddToPlaylist}
-                />
-              ))}
-            </div>
+            <>
+              <div className="songs-grid">
+                {visibleSongs.map((song) => (
+                  <SongCard
+                    key={song.id}
+                    song={song}
+                    isCurrentSong={currentSong?.id === song.id}
+                    isPlaying={isPlaying}
+                    onPlay={onPlay}
+                    onLike={onLike}
+                    isLiked={likedSongs.includes(song.id)}
+                    categoryColor={cat.color}
+                    playlists={playlists}
+                    onAddToPlaylist={onAddToPlaylist}
+                  />
+                ))}
+              </div>
+              
+              {visibleCount < filteredSongs.length && (
+                <div style={{ textAlign: "center", marginTop: 40, paddingBottom: 40 }}>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setVisibleCount(prev => prev + 20)}
+                    style={{ padding: "12px 32px", fontSize: 16 }}
+                  >
+                    Load More Tracks
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Empty after search */}

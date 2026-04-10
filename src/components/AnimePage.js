@@ -8,6 +8,11 @@ export default function AnimePage({ setIsPlaying }) {
   const [selectedSeries, setSelectedSeries] = useState(null);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedSeries, searchTerm]);
 
   useEffect(() => {
     async function loadAnime() {
@@ -33,6 +38,19 @@ export default function AnimePage({ setIsPlaying }) {
   const filteredEpisodes = selectedSeries?.episodes.filter(e =>
     e.title.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Series List
+  const uniqueSeriesNames = Array.from(new Set(filteredSeries.map(s => s.series)));
+  const visibleSeriesNames = uniqueSeriesNames.slice(0, visibleCount);
+
+  // Episodes List
+  const seenEps = new Set();
+  const uniqueEpisodes = filteredEpisodes.filter(e => {
+    if (seenEps.has(e.id)) return false;
+    seenEps.add(e.id);
+    return true;
+  });
+  const visibleUniqueEpisodes = uniqueEpisodes.slice(0, visibleCount);
 
   return (
     <div className="page anime-page">
@@ -75,7 +93,7 @@ export default function AnimePage({ setIsPlaying }) {
         <div className="anime-grid">
           {!selectedSeries ? (
             // SERIES VIEW - Deduplicate
-            Array.from(new Set(filteredSeries.map(s => s.series))).map(seriesName => {
+            visibleSeriesNames.map(seriesName => {
               const s = filteredSeries.find(x => x.series === seriesName);
               return (
                 <div key={s.series} className="anime-card series-card" onClick={() => setSelectedSeries(s)}>
@@ -96,14 +114,8 @@ export default function AnimePage({ setIsPlaying }) {
             })
           ) : (
             // EPISODE VIEW - Deduplicate by ID
-            (() => {
-              const seen = new Set();
-              return filteredEpisodes.filter(e => {
-                if (seen.has(e.id)) return false;
-                seen.add(e.id);
-                return true;
-              }).map((episode) => (
-                <div key={episode.id} className="anime-card episode-card" onClick={() => openEpisode(episode)}>
+            visibleUniqueEpisodes.map((episode) => (
+              <div key={episode.id} className="anime-card episode-card" onClick={() => openEpisode(episode)}>
                   <div className="anime-thumb-wrapper">
                     <img 
                       src={episode.artwork} 
@@ -122,9 +134,31 @@ export default function AnimePage({ setIsPlaying }) {
                     <h3 className="anime-title episode-title">{episode.title}</h3>
                   </div>
                 </div>
-              ));
-            })()
+            ))
           )}
+        </div>
+      )}
+
+      {!loading && !selectedSeries && visibleCount < uniqueSeriesNames.length && (
+        <div style={{ textAlign: "center", marginTop: 40, paddingBottom: 40 }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setVisibleCount(prev => prev + 20)}
+            style={{ padding: "12px 32px", fontSize: 16 }}
+          >
+            Load More Shows
+          </button>
+        </div>
+      )}
+      {!loading && selectedSeries && visibleCount < uniqueEpisodes.length && (
+        <div style={{ textAlign: "center", marginTop: 40, paddingBottom: 40 }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setVisibleCount(prev => prev + 20)}
+            style={{ padding: "12px 32px", fontSize: 16 }}
+          >
+            Load More Episodes
+          </button>
         </div>
       )}
 
