@@ -7,6 +7,7 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
   const [filterGenre, setFilterGenre] = useState("All");
   const [sortBy, setSortBy] = useState("title");
   const [view, setView] = useState("grid"); // grid | list
+  const [visibleCount, setVisibleCount] = useState(50);
   const [localSongs, setLocalSongs] = useState([]);
   const [loadingLocal, setLoadingLocal] = useState(true);
   const [activeSongMenu, setActiveSongMenu] = useState(null);
@@ -43,6 +44,13 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
     if (sortBy === "duration") return a.duration - b.duration;
     return 0;
   });
+
+  // Reset pagination when filtering
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [search, filterGenre, sortBy]);
+
+  const visibleSongs = filtered.slice(0, visibleCount);
 
   return (
     <div className="page">
@@ -119,7 +127,7 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
         </div>
       ) : view === "grid" ? (
         <div className="songs-grid">
-          {filtered.map((song) => (
+          {visibleSongs.map((song) => (
             <div
               key={song.id}
               className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
@@ -216,7 +224,7 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
           </div>
           <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 8 }} />
           <div className="song-list">
-            {filtered.map((song, i) => (
+            {visibleSongs.map((song, i) => (
               <div
                 key={song.id}
                 className={`song-row ${currentSong?.id === song.id ? "playing" : ""}`}
@@ -279,6 +287,18 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {visibleCount < filtered.length && (
+        <div style={{ textAlign: "center", marginTop: 40, paddingBottom: 40 }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setVisibleCount(prev => prev + 50)}
+            style={{ padding: "12px 32px", fontSize: 16 }}
+          >
+            Load More Songs
+          </button>
         </div>
       )}
     </div>

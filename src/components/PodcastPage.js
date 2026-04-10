@@ -7,6 +7,7 @@ export default function PodcastPage({ setIsPlaying }) {
   const [loading, setLoading] = useState(true);
   const [selectedPodcast, setSelectedPodcast] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
     async function loadPodcasts() {
@@ -22,6 +23,8 @@ export default function PodcastPage({ setIsPlaying }) {
     p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.artist.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const visiblePodcasts = filteredPodcasts.slice(0, visibleCount);
 
   const openPodcast = (podcast) => {
     setSelectedPodcast(podcast);
@@ -62,7 +65,7 @@ export default function PodcastPage({ setIsPlaying }) {
         </div>
       ) : (
         <div className="podcast-grid">
-          {filteredPodcasts.map((podcast) => (
+          {visiblePodcasts.map((podcast) => (
             <div 
               key={podcast.id} 
               className="podcast-card"
@@ -83,6 +86,18 @@ export default function PodcastPage({ setIsPlaying }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && visibleCount < filteredPodcasts.length && (
+        <div style={{ textAlign: "center", marginTop: 40, paddingBottom: 40 }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setVisibleCount(prev => prev + 20)}
+            style={{ padding: "12px 32px", fontSize: 16 }}
+          >
+            Load More Podcasts
+          </button>
         </div>
       )}
 
