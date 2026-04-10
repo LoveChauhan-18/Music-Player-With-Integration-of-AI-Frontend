@@ -35,12 +35,19 @@ export const authService = {
       body: JSON.stringify({ username, email, password }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(JSON.stringify(data) || "Registration failed.");
+      // Handle the case where the backend returns field-specific errors (e.g. { "username": ["A user with that username already exists."] })
+      if (typeof data === 'object' && !Array.isArray(data)) {
+        const firstErrorKey = Object.keys(data)[0];
+        const errorMessage = Array.isArray(data[firstErrorKey]) ? data[firstErrorKey][0] : data[firstErrorKey];
+        throw new Error(`${firstErrorKey}: ${errorMessage}`);
+      }
+      throw new Error("Registration failed. Please try again.");
     }
 
-    return await response.json();
+    return data;
   },
 
   /**

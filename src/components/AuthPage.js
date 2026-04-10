@@ -20,10 +20,14 @@ export default function AuthPage({ onLoginSuccess, setActivePage }) {
         await authService.login(username, password);
         onLoginSuccess(username);
       } else {
+        // 1. Create account
         await authService.register(username, email, password);
-        // After signup, switch to login or auto-login
-        setIsLogin(true);
-        setError("Account created! Please log in.");
+        
+        // 2. Automatically log in the user
+        await authService.login(username, password);
+        
+        // 3. Trigger success flow
+        onLoginSuccess(username);
       }
     } catch (err) {
       setError(err.message || "Something went wrong.");

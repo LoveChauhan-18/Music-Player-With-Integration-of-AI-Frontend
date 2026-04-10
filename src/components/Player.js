@@ -1,22 +1,31 @@
 import React, { useState, useEffect, useRef } from "react";
 import { formatDuration } from "../data/songs";
 
-export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, onPrev, onLike, isLiked }) {
+export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, onPrev, onLike, isLiked, isShuffled, onToggleShuffle }) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0); // 0=off 1=all 2=one
   
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
   const durationRef = useRef(currentSong?.duration || 200);
 
+  // Reset progress when song changes
+  useEffect(() => {
+    setProgress(0);
+    durationRef.current = currentSong?.duration || 200;
+  }, [currentSong?.id]);
+
   // Handle Play/Pause for Audio element
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(e => console.log("Audio play error:", e));
+        // Small delay to let audio element load new src
+        const timer = setTimeout(() => {
+          audioRef.current?.play().catch(e => console.log("Audio play error:", e));
+        }, 100);
+        return () => clearTimeout(timer);
       } else {
         audioRef.current.pause();
       }
@@ -156,7 +165,7 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
       {/* Controls */}
       <div className="player-controls">
         <div className="player-buttons">
-          <button className={`player-control-btn ${isShuffled ? "active" : ""}`} onClick={() => setIsShuffled(!isShuffled)}>🔀</button>
+          <button className={`player-control-btn ${isShuffled ? "active" : ""}`} onClick={onToggleShuffle}>🔀</button>
           <button className="player-control-btn" onClick={onPrev}>⏮️</button>
           <button className="btn-play" onClick={() => setIsPlaying(!isPlaying)}>
             {isPlaying ? "⏸" : "▶"}

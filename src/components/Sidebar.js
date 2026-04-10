@@ -14,7 +14,23 @@ const NAV_ITEMS = [
   { id: "liked", icon: "❤️", label: "Liked Songs" },
 ];
 
-export default function Sidebar({ activePage, setActivePage, likedSongs, user, onLogout }) {
+export default function Sidebar({ activePage, setActivePage, likedSongs, playlists, user, onLogout }) {
+  const getPlaylistEmoji = (name) => {
+    if (name.includes("Favourites") || name.includes("Liked")) return "❤️";
+    if (name.includes("Workout")) return "💪";
+    if (name.includes("Chill")) return "🌊";
+    if (name.includes("Focus")) return "🎯";
+    return "🎵";
+  };
+
+  const getPlaylistColor = (name) => {
+    if (name.includes("Favourites") || name.includes("Liked")) return "#ef4444";
+    if (name.includes("Workout")) return "#f97316";
+    if (name.includes("Chill")) return "#06b6d4";
+    if (name.includes("Focus")) return "#8b5cf6";
+    return "#10b981";
+  };
+
   return (
     <aside className="sidebar" style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto" }}>
@@ -57,26 +73,30 @@ export default function Sidebar({ activePage, setActivePage, likedSongs, user, o
         </nav>
 
         <div className="sidebar-playlists">
-          {PLAYLISTS.map((pl) => (
-            <div
-              key={pl.id}
-              className="playlist-item"
-              onClick={() => setActivePage(`playlist_${pl.id}`)}
-            >
+          {playlists.map((pl) => {
+            const emoji = getPlaylistEmoji(pl.name);
+            const color = getPlaylistColor(pl.name);
+            return (
               <div
-                className="playlist-item-art no-img"
-                style={{ background: `linear-gradient(135deg, ${pl.color}88, ${pl.color}44)` }}
+                key={pl.id}
+                className={`playlist-item ${activePage === `playlist_${pl.id}` ? "active" : ""}`}
+                onClick={() => setActivePage(`playlist_${pl.id}`)}
               >
-                {pl.emoji}
-              </div>
-              <div className="playlist-item-info">
-                <div className="playlist-item-name">{pl.name}</div>
-                <div className="playlist-item-count">
-                  {pl.songs.length} songs
+                <div
+                  className="playlist-item-art no-img"
+                  style={{ background: `linear-gradient(135deg, ${color}88, ${color}44)` }}
+                >
+                  {emoji}
+                </div>
+                <div className="playlist-item-info">
+                  <div className="playlist-item-name">{pl.name}</div>
+                  <div className="playlist-item-count">
+                    {pl.songs?.length || 0} songs
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { SONGS, formatDuration, formatPlays } from "../data/songs";
 import { fetchLocalLibrary } from "../services/musicApi";
 
-export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, likedSongs }) {
+export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, likedSongs, playlists, onAddToPlaylist }) {
   const [search, setSearch] = useState("");
   const [filterGenre, setFilterGenre] = useState("All");
   const [sortBy, setSortBy] = useState("title");
   const [view, setView] = useState("grid"); // grid | list
   const [localSongs, setLocalSongs] = useState([]);
   const [loadingLocal, setLoadingLocal] = useState(true);
+  const [activeSongMenu, setActiveSongMenu] = useState(null);
 
   useEffect(() => {
     async function getLocal() {
@@ -50,7 +51,7 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
           📚 Your Collection
         </h1>
         <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-          {SONGS.length + localSongs.length} tracks in your personal library
+          {allSongs.length} tracks in your personal library
         </p>
       </div>
 
@@ -123,13 +124,15 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
               key={song.id}
               className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
               onClick={() => onPlay(song)}
+              style={{ overflow: activeSongMenu === song.id ? "visible" : undefined }}
             >
               <div className="song-card-art">
                 <div className="song-card-art-placeholder" style={{
-                  background: `linear-gradient(135deg, ${song.color}55, ${song.color}22)`,
+                  background: `linear-gradient(135deg, ${song.color || '#8b5cf6'}55, ${song.color || '#8b5cf6'}22)`,
                 }}>
-                  <span style={{ fontSize: 48 }}>{song.emoji}</span>
+                  <span style={{ fontSize: 48 }}>{song.emoji || '🎵'}</span>
                 </div>
+
                 <div className="song-card-play-overlay">
                   <button className="btn-play btn-play-sm">
                     {currentSong?.id === song.id && isPlaying ? "⏸" : "▶"}
@@ -144,19 +147,46 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
                   </div>
                 )}
               </div>
+
+              {/* Playlist ➕ button — outside song-card-art to avoid overflow:hidden clipping */}
+              <div style={{ position: "absolute", top: 10, right: 10, zIndex: 200 }}>
+                <button
+                  className="btn-action"
+                  onClick={(e) => { e.stopPropagation(); setActiveSongMenu(activeSongMenu === song.id ? null : song.id); }}
+                >
+                  ➕
+                </button>
+                {activeSongMenu === song.id && (
+                  <div className="playlist-dropdown glass animate-fade-in" style={{ top: "36px", right: 0, zIndex: 300 }}>
+                    <div className="dropdown-header">Add to Playlist</div>
+                    {playlists.length === 0 && (
+                      <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)" }}>Login to see playlists</div>
+                    )}
+                    {playlists.map(pl => (
+                      <button
+                        key={pl.id}
+                        className="dropdown-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToPlaylist(pl.id, song);
+                          setActiveSongMenu(null);
+                        }}
+                      >
+                        {pl.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
                   <div className="song-card-title">{song.title}</div>
                   <div className="song-card-artist">{song.artist}</div>
-                  {song.source === "local" && (
-                    <div style={{ fontSize: 9, fontWeight: 800, color: "#10b981", textTransform: "uppercase", marginTop: 4 }}>
-                      📁 Project Internal
-                    </div>
-                  )}
                 </div>
                 <button
                   className={`player-like-btn ${likedSongs.includes(song.id) ? "liked" : ""}`}
-                  onClick={e => { e.stopPropagation(); onLike(song.id); }}
+                  onClick={e => { e.stopPropagation(); onLike(song.id, song); }}
                   style={{ flexShrink: 0, marginTop: 2 }}
                 >
                   {likedSongs.includes(song.id) ? "❤️" : "🤍"}
@@ -199,20 +229,47 @@ export default function LibraryPage({ currentSong, isPlaying, onPlay, onLike, li
                 </div>
                 <div className="song-row-info">
                   <div className="song-row-thumb-placeholder" style={{
-                    background: `linear-gradient(135deg, ${song.color}88, ${song.color}33)`,
+                    background: `linear-gradient(135deg, ${song.color || '#333'}88, ${song.color || '#333'}33)`,
                   }}>
-                    {song.emoji}
+                    {song.emoji || '🎵'}
                   </div>
                   <div>
                     <div className="song-row-name">{song.title}</div>
-                    <div className="song-row-artist">{song.artist} · {formatPlays(song.plays)} plays</div>
+                    <div className="song-row-artist">{song.artist}</div>
                   </div>
                 </div>
                 <div className="song-row-album">{song.album}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
+                  <div style={{ position: "relative" }}>
+                    <button 
+                      className="btn-text" 
+                      style={{ fontSize: 18, opacity: 0.5 }}
+                      onClick={(e) => { e.stopPropagation(); setActiveSongMenu(activeSongMenu === song.id ? null : song.id); }}
+                    >
+                      ➕
+                    </button>
+                    {activeSongMenu === song.id && (
+                      <div className="playlist-dropdown glass animate-fade-in" style={{ bottom: "30px", right: 0 }}>
+                        <div className="dropdown-header">Add to Playlist</div>
+                        {playlists.map(pl => (
+                          <button 
+                            key={pl.id} 
+                            className="dropdown-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddToPlaylist(pl.id, song);
+                              setActiveSongMenu(null);
+                            }}
+                          >
+                             {pl.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     className={`player-like-btn ${likedSongs.includes(song.id) ? "liked" : ""}`}
-                    onClick={e => { e.stopPropagation(); onLike(song.id); }}
+                    onClick={e => { e.stopPropagation(); onLike(song.id, song); }}
                     style={{ opacity: likedSongs.includes(song.id) ? 1 : 0.3 }}
                   >
                     {likedSongs.includes(song.id) ? "❤️" : "🤍"}

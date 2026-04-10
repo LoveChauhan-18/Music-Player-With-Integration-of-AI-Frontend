@@ -1,10 +1,10 @@
 import axios from 'axios';
 
-const API_URL = 'https://pittu-music-api.onrender.com/api';
+const API_URL = 'http://127.0.0.1:8000/api';
 
 // Helper to get JWT headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('nb_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -42,10 +42,11 @@ export const playlistService = {
   },
 
   // Add song to a specific playlist
-  addSongToPlaylist: async (playlistId, songId) => {
+  addSongToPlaylist: async (playlistId, songId, songMetadata = null) => {
     const response = await axios.post(`${API_URL}/playlists/add-song/`, {
       playlist: playlistId,
-      song: songId
+      song: songId,
+      song_metadata: songMetadata
     }, {
       headers: getAuthHeaders(),
     });

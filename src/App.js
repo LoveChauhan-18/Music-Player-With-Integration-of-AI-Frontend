@@ -35,6 +35,8 @@ export default function App() {
   const [user, setUser] = useState(authService.getUser());
   const [libraryFetched, setLibraryFetched] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [playlists, setPlaylists] = useState([]);
+  const [isShuffled, setIsShuffled] = useState(false);
 
   React.useEffect(() => {
     const initApp = async () => {
@@ -44,6 +46,10 @@ export default function App() {
         setUser(savedUser);
         const likedIds = await playlistService.getLikedSongIds().catch(() => []);
         setLikedSongs(likedIds);
+        
+        // Fetch dynamic playlists
+        const pl = await playlistService.getPlaylists().catch(() => []);
+        setPlaylists(pl);
       }
 
       // 2. Initial Queue (800+ songs from local library)
@@ -65,7 +71,7 @@ export default function App() {
     }, 3000);
   }, []);
 
-  const handlePlay = useCallback(async (song) => {
+  const handlePlay = useCallback(async (song, contextQueue) => {
     const { resolveFullAudio } = await import("./services/musicApi");
 
     if (currentSong?.id === song.id) {
@@ -74,13 +80,25 @@ export default function App() {
       // 1. Initial play with preview (instant)
       setCurrentSong(song);
       setIsPlaying(true);
+
+      // 2. Update queue: use context queue if provided, otherwise add song to existing queue
+      if (contextQueue && contextQueue.length > 0) {
+        setQueue(contextQueue);
+      } else {
+        setQueue(prev => {
+          if (!prev.find(s => s.id === song.id)) {
+            return [...prev, song];
+          }
+          return prev;
+        });
+      }
       
       const msg = song.source === "itunes" 
         ? `Playing: ${song.title} (resolving full audio...)` 
         : `Now playing: ${song.title}`;
       showToast(msg, "info", "🎵");
 
-      // 2. Resolve Full Audio in background
+      // 3. Resolve Full Audio in background
       if (song.source === "itunes" || (song.source === "local" && !song.audio_file)) {
         try {
           const fullAudioUrl = await resolve_with_timeout(
@@ -113,20 +131,39 @@ export default function App() {
   };
 
   const handleNext = useCallback(() => {
-    if (!currentSong) return;
-    const idx = queue.findIndex((s) => s.id === currentSong.id);
-    const next = queue[(idx + 1) % queue.length];
-    setCurrentSong(next);
+    if (!currentSong || queue.length === 0) return;
+    if (isShuffled) {
+      // Pick a random song that isn't the current one
+      const others = queue.filter(s => s.id !== currentSong.id);
+      if (others.length === 0) return;
+      const randomSong = others[Math.floor(Math.random() * others.length)];
+      setCurrentSong(randomSong);
+    } else {
+      const idx = queue.findIndex((s) => s.id === currentSong.id);
+      const nextIdx = idx === -1 ? 0 : (idx + 1) % queue.length;
+      setCurrentSong(queue[nextIdx]);
+    }
     setIsPlaying(true);
-  }, [currentSong, queue]);
+  }, [currentSong, queue, isShuffled]);
 
   const handlePrev = useCallback(() => {
-    if (!currentSong) return;
-    const idx = queue.findIndex((s) => s.id === currentSong.id);
-    const prev = queue[(idx - 1 + queue.length) % queue.length];
-    setCurrentSong(prev);
+    if (!currentSong || queue.length === 0) return;
+    if (isShuffled) {
+      const others = queue.filter(s => s.id !== currentSong.id);
+      if (others.length === 0) return;
+      const randomSong = others[Math.floor(Math.random() * others.length)];
+      setCurrentSong(randomSong);
+    } else {
+      const idx = queue.findIndex((s) => s.id === currentSong.id);
+      const prevIdx = idx === -1 ? 0 : (idx - 1 + queue.length) % queue.length;
+      setCurrentSong(queue[prevIdx]);
+    }
     setIsPlaying(true);
-  }, [currentSong, queue]);
+  }, [currentSong, queue, isShuffled]);
+
+  const handleToggleShuffle = useCallback(() => {
+    setIsShuffled(prev => !prev);
+  }, []);
 
   const handleLike = useCallback(async (songId, songMetadata = null) => {
     // If it's an iTunes song, the ID will be large or we'll have metadata
@@ -167,7 +204,30 @@ export default function App() {
     // Sync likes upon login
     const likedIds = await playlistService.getLikedSongIds();
     setLikedSongs(likedIds);
+
+    // Sync playlists upon login
+    const pl = await playlistService.getPlaylists();
+    setPlaylists(pl);
   }, [showToast]);
+
+  const handleAddToPlaylist = useCallback(async (playlistId, song) => {
+    if (!user) {
+      showToast("Please login to add to playlists", "warning", "👤");
+      setActivePage("auth");
+      return;
+    }
+
+    try {
+      await playlistService.addSongToPlaylist(playlistId, song.id, song);
+      showToast(`Added to playlist!`, "success", "➕");
+      
+      // Refresh playlists to show new song
+      const updated = await playlistService.getPlaylists();
+      setPlaylists(updated);
+    } catch (err) {
+      showToast("Could not add to playlist", "error", "❌");
+    }
+  }, [user, showToast]);
 
   const handleLogout = useCallback(() => {
     authService.logout();
@@ -179,9 +239,10 @@ export default function App() {
   const renderPage = () => {
     if (activePage.startsWith("playlist_")) {
       const id = parseInt(activePage.split("_")[1]);
+      const playlist = playlists.find(p => p.id === id);
       return (
         <PlaylistPage
-          playlistId={id}
+          playlist={playlist}
           currentSong={currentSong}
           isPlaying={isPlaying}
           onPlay={handlePlay}
@@ -200,6 +261,8 @@ export default function App() {
             onLike={handleLike}
             likedSongs={likedSongs}
             setActivePage={setActivePage}
+            playlists={playlists}
+            onAddToPlaylist={handleAddToPlaylist}
           />
         );
       case "search":
@@ -211,6 +274,8 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
+            playlists={playlists}
+            onAddToPlaylist={handleAddToPlaylist}
           />
         );
       case "library":
@@ -221,6 +286,8 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
+            playlists={playlists}
+            onAddToPlaylist={handleAddToPlaylist}
           />
         );
       case "mood":
@@ -239,6 +306,8 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
+            playlists={playlists}
+            onAddToPlaylist={handleAddToPlaylist}
           />
         );
       case "creator":
@@ -287,6 +356,7 @@ export default function App() {
           activePage={activePage}
           setActivePage={setActivePage}
           likedSongs={likedSongs}
+          playlists={playlists}
           user={user}
           onLogout={handleLogout}
         />
@@ -360,6 +430,8 @@ export default function App() {
           onPrev={handlePrev}
           onLike={handleLike}
           isLiked={currentSong ? likedSongs.includes(currentSong.id) : false}
+          isShuffled={isShuffled}
+          onToggleShuffle={handleToggleShuffle}
         />
       </div>
 

@@ -74,36 +74,56 @@ export default function CartoonPage({ setIsPlaying }) {
       ) : (
         <div className="cartoon-grid">
           {!selectedSeries ? (
-            // SERIES VIEW
-            filteredSeries.map((s) => (
-              <div key={s.series} className="cartoon-card series-card" onClick={() => setSelectedSeries(s)}>
-                <div className="cartoon-thumb-wrapper series-thumb">
-                  <img src={s.artwork} alt={s.series} className="cartoon-thumb" />
-                  <div className="episode-count-badge">{s.episodes.length} Episodes</div>
-                </div>
-                <div className="cartoon-info">
-                  <h3 className="cartoon-title">{s.series}</h3>
-                </div>
-              </div>
-            ))
-          ) : (
-            // EPISODE VIEW
-            filteredEpisodes.map((episode) => (
-              <div key={episode.id} className="cartoon-card episode-card" onClick={() => openEpisode(episode)}>
-                <div className="cartoon-thumb-wrapper">
-                  <img src={episode.artwork} alt={episode.title} className="cartoon-thumb" />
-                  <div className="play-overlay">
-                    <span className="play-icon">▶</span>
+            // SERIES VIEW - Deduplicate just in case
+            Array.from(new Set(filteredSeries.map(s => s.series))).map(seriesName => {
+              const s = filteredSeries.find(x => x.series === seriesName);
+              return (
+                <div key={s.series} className="cartoon-card series-card" onClick={() => setSelectedSeries(s)}>
+                  <div className="cartoon-thumb-wrapper series-thumb">
+                    <img 
+                      src={s.artwork} 
+                      alt={s.series} 
+                      className="cartoon-thumb" 
+                      onError={(e) => { e.target.src = "https://placehold.co/400x400/1e1e2e/cyan?text=Series"; }}
+                    />
+                    <div className="episode-count-badge">{s.episodes.length} Episodes</div>
                   </div>
-                  {episode.duration > 0 && (
-                    <span className="duration-tag">{Math.floor(episode.duration / 60)}m</span>
-                  )}
+                  <div className="cartoon-info">
+                    <h3 className="cartoon-title">{s.series}</h3>
+                  </div>
                 </div>
-                <div className="cartoon-info">
-                  <h3 className="cartoon-title episode-title">{episode.title}</h3>
+              );
+            })
+          ) : (
+            // EPISODE VIEW - Deduplicate episodes by ID
+            (() => {
+              const seen = new Set();
+              return filteredEpisodes.filter(e => {
+                if (seen.has(e.id)) return false;
+                seen.add(e.id);
+                return true;
+              }).map((episode) => (
+                <div key={episode.id} className="cartoon-card episode-card" onClick={() => openEpisode(episode)}>
+                  <div className="cartoon-thumb-wrapper">
+                    <img 
+                      src={episode.artwork} 
+                      alt={episode.title} 
+                      className="cartoon-thumb" 
+                      onError={(e) => { e.target.src = "https://placehold.co/600x337/1e1e2e/cyan?text=Episode"; }}
+                    />
+                    <div className="play-overlay">
+                      <span className="play-icon">▶</span>
+                    </div>
+                    {episode.duration > 0 && (
+                      <span className="duration-tag">{Math.floor(episode.duration / 60)}m</span>
+                    )}
+                  </div>
+                  <div className="cartoon-info">
+                    <h3 className="cartoon-title episode-title">{episode.title}</h3>
+                  </div>
                 </div>
-              </div>
-            ))
+              ));
+            })()
           )}
         </div>
       )}

@@ -74,36 +74,56 @@ export default function AnimePage({ setIsPlaying }) {
       ) : (
         <div className="anime-grid">
           {!selectedSeries ? (
-            // SERIES VIEW
-            filteredSeries.map((s) => (
-              <div key={s.series} className="anime-card series-card" onClick={() => setSelectedSeries(s)}>
-                <div className="anime-thumb-wrapper series-thumb">
-                  <img src={s.artwork} alt={s.series} className="anime-thumb" />
-                  <div className="episode-count-badge">{s.episodes.length} Episodes</div>
-                </div>
-                <div className="anime-info">
-                  <h3 className="anime-title">{s.series}</h3>
-                </div>
-              </div>
-            ))
-          ) : (
-            // EPISODE VIEW
-            filteredEpisodes.map((episode) => (
-              <div key={episode.id} className="anime-card episode-card" onClick={() => openEpisode(episode)}>
-                <div className="anime-thumb-wrapper">
-                  <img src={episode.artwork} alt={episode.title} className="anime-thumb" />
-                  <div className="play-overlay">
-                    <span className="play-icon">▶</span>
+            // SERIES VIEW - Deduplicate
+            Array.from(new Set(filteredSeries.map(s => s.series))).map(seriesName => {
+              const s = filteredSeries.find(x => x.series === seriesName);
+              return (
+                <div key={s.series} className="anime-card series-card" onClick={() => setSelectedSeries(s)}>
+                  <div className="anime-thumb-wrapper series-thumb">
+                    <img 
+                      src={s.artwork} 
+                      alt={s.series} 
+                      className="anime-thumb" 
+                      onError={(e) => { e.target.src = "https://placehold.co/400x600/1e1e2e/orange?text=Anime"; }}
+                    />
+                    <div className="episode-count-badge">{s.episodes.length} Episodes</div>
                   </div>
-                  {episode.duration > 0 && (
-                    <span className="duration-tag">{Math.floor(episode.duration / 60)}m</span>
-                  )}
+                  <div className="anime-info">
+                    <h3 className="anime-title">{s.series}</h3>
+                  </div>
                 </div>
-                <div className="anime-info">
-                  <h3 className="anime-title episode-title">{episode.title}</h3>
+              );
+            })
+          ) : (
+            // EPISODE VIEW - Deduplicate by ID
+            (() => {
+              const seen = new Set();
+              return filteredEpisodes.filter(e => {
+                if (seen.has(e.id)) return false;
+                seen.add(e.id);
+                return true;
+              }).map((episode) => (
+                <div key={episode.id} className="anime-card episode-card" onClick={() => openEpisode(episode)}>
+                  <div className="anime-thumb-wrapper">
+                    <img 
+                      src={episode.artwork} 
+                      alt={episode.title} 
+                      className="anime-thumb" 
+                      onError={(e) => { e.target.src = "https://placehold.co/600x337/1e1e2e/orange?text=Episode"; }}
+                    />
+                    <div className="play-overlay">
+                      <span className="play-icon">▶</span>
+                    </div>
+                    {episode.duration > 0 && (
+                      <span className="duration-tag">{Math.floor(episode.duration / 60)}m</span>
+                    )}
+                  </div>
+                  <div className="anime-info">
+                    <h3 className="anime-title episode-title">{episode.title}</h3>
+                  </div>
                 </div>
-              </div>
-            ))
+              ));
+            })()
           )}
         </div>
       )}

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import { searchMusic } from "../services/musicApi";
 import { formatDuration } from "../data/songs";
 
-function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLiked }) {
+function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLiked, playlists, onAddToPlaylist }) {
+  const [showMenu, setShowMenu] = React.useState(false);
   return (
     <div
       className={`song-card ${isCurrentSong ? "playing" : ""}`}
       onClick={() => onPlay(song)}
+      style={{ overflow: showMenu ? "visible" : undefined }}
     >
       <div className="song-card-art">
         {song.artwork ? (
@@ -47,6 +49,38 @@ function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLi
           iTunes
         </div>
       </div>
+
+      {/* Playlist ➕ button — outside song-card-art to avoid overflow:hidden clipping */}
+      <div style={{ position: "absolute", top: 10, right: 10, zIndex: 200 }}>
+        <button
+          className="btn-action"
+          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+        >
+          ➕
+        </button>
+        {showMenu && (
+          <div className="playlist-dropdown glass animate-fade-in" style={{ top: "36px", right: 0, zIndex: 300 }}>
+            <div className="dropdown-header">Add to Playlist</div>
+            {playlists.length === 0 && (
+              <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)" }}>Login to see playlists</div>
+            )}
+            {playlists.map(pl => (
+              <button
+                key={pl.id}
+                className="dropdown-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToPlaylist(pl.id, song);
+                  setShowMenu(false);
+                }}
+              >
+                {pl.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="song-card-title">{song.title}</div>
@@ -56,7 +90,7 @@ function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLi
           className={`player-like-btn ${isLiked ? "liked" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
-            onLike(song.id, song); // Pass the whole song object in case we need to save it to DB
+            onLike(song.id, song);
           }}
           style={{ flexShrink: 0, marginTop: 4 }}
         >
@@ -90,7 +124,7 @@ function SkeletonCard() {
   );
 }
 
-export default function SearchPage({ initialQuery, currentSong, isPlaying, onPlay, onLike, likedSongs }) {
+export default function SearchPage({ initialQuery, currentSong, isPlaying, onPlay, onLike, likedSongs, playlists, onAddToPlaylist }) {
   const [query, setQuery] = useState(initialQuery || "");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -194,6 +228,8 @@ export default function SearchPage({ initialQuery, currentSong, isPlaying, onPla
               onPlay={onPlay}
               onLike={onLike}
               isLiked={likedSongs.includes(song.id)}
+              playlists={playlists}
+              onAddToPlaylist={onAddToPlaylist}
             />
           ))}
         </div>
