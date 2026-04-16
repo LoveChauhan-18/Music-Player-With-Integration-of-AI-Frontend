@@ -1,6 +1,6 @@
-﻿services:
+services:
   - type: web
-    name: pittu-music-frontend
+    name: love-music-frontend
     env: static
     buildCommand: npm install && CI=false npm run build
     staticPublishPath: ./build
