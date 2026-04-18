@@ -1,6 +1,6 @@
 // src/services/authService.js
 
-const API_BASE_URL = "https://love-music-backend.onrender.com/api";
+const API_BASE_URL = "https://love-music-api.onrender.com/api";
 
 export const authService = {
   /**
@@ -14,8 +14,13 @@ export const authService = {
     });
 
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.detail || "Login failed. Check your credentials.");
+      // Try to get JSON error, fallback to status text
+      let errorMsg = "Login failed. Check your credentials.";
+      try {
+        const data = await response.json();
+        errorMsg = data.detail || errorMsg;
+      } catch (e) {}
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();
@@ -35,10 +40,16 @@ export const authService = {
       body: JSON.stringify({ username, email, password }),
     });
 
+    // Handle non-JSON responses (like HTML error pages)
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error(`Server error (${response.status}). Please try again later.`);
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
-      // Handle the case where the backend returns field-specific errors (e.g. { "username": ["A user with that username already exists."] })
+      // Handle the case where the backend returns field-specific errors
       if (typeof data === 'object' && !Array.isArray(data)) {
         const firstErrorKey = Object.keys(data)[0];
         const errorMessage = Array.isArray(data[firstErrorKey]) ? data[firstErrorKey][0] : data[firstErrorKey];
