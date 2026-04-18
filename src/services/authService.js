@@ -40,22 +40,28 @@ export const authService = {
       body: JSON.stringify({ username, email, password }),
     });
 
-    // Handle non-JSON responses (like HTML error pages)
     const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error(`Server error (${response.status}). Please try again later.`);
+    let data;
+
+    // Try to parse JSON if content-type is correct
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
     }
 
-    const data = await response.json();
-
     if (!response.ok) {
-      // Handle the case where the backend returns field-specific errors
-      if (typeof data === 'object' && !Array.isArray(data)) {
+      // If we have JSON data and it's an object, try to extract specific errors
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        // Check for our custom 'error' key first
+        if (data.error) throw new Error(data.error);
+        
+        // Otherwise check for DRF style errors
         const firstErrorKey = Object.keys(data)[0];
         const errorMessage = Array.isArray(data[firstErrorKey]) ? data[firstErrorKey][0] : data[firstErrorKey];
         throw new Error(`${firstErrorKey}: ${errorMessage}`);
       }
-      throw new Error("Registration failed. Please try again.");
+      
+      // Fallback message
+      throw new Error(`Server error (${response.status}). Please try again later.`);
     }
 
     return data;
