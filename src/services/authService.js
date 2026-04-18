@@ -1,6 +1,6 @@
 // src/services/authService.js
 
-const API_BASE_URL = "https://love-music-api.onrender.com/api";
+const API_BASE_URL = "https://love-music-backend.onrender.com/api";
 
 export const authService = {
   /**
