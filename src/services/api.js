@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://love-music-backend.onrender.com/api/",
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? "https://love-music-backend.onrender.com/api/" 
+    : "http://localhost:8000/api/",
 });
 
 API.interceptors.request.use((req) => {

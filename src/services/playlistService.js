@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'https://love-music-backend.onrender.com/api';
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://love-music-backend.onrender.com/api' 
+  : 'http://localhost:8000/api';
 
 // Helper to get JWT headers
 const getAuthHeaders = () => {

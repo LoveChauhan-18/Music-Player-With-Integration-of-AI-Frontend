@@ -1,6 +1,8 @@
 // src/services/authService.js
 
-const API_BASE_URL = "https://love-music-backend.onrender.com/api";
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? "https://love-music-backend.onrender.com/api" 
+  : "http://localhost:8000/api";
 
 export const authService = {
   /**

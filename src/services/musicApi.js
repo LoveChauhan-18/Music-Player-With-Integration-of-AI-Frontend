@@ -130,7 +130,11 @@ export async function searchMusic(query, limit = 20) {
 
 // ── Django Backend Integration ──────────────────────────────────────────
 
-const LOCAL_API_URL = "https://love-music-backend.onrender.com/api/songs/";
+const BASE_API_URL = process.env.NODE_ENV === 'production' 
+  ? "https://love-music-backend.onrender.com/api" 
+  : "http://localhost:8000/api";
+
+const LOCAL_API_URL = `${BASE_API_URL}/songs/`;
 
 export async function fetchLocalLibrary() {
   try {
@@ -160,7 +164,7 @@ export async function fetchLocalLibrary() {
 
 export async function fetchPodcasts() {
   try {
-    const res = await fetch("https://love-music-backend.onrender.com/api/podcasts/");
+    const res = await fetch(`${BASE_API_URL}/podcasts/`);
     if (!res.ok) throw new Error("Podcasts API unreachable");
     return await res.json();
   } catch (e) {
@@ -171,7 +175,7 @@ export async function fetchPodcasts() {
 
 export async function fetchCartoons() {
   try {
-    const res = await fetch("https://love-music-backend.onrender.com/api/cartoons/");
+    const res = await fetch(`${BASE_API_URL}/cartoons/`);
     if (!res.ok) throw new Error("Cartoons API unreachable");
     return await res.json();
   } catch (e) {
@@ -182,7 +186,7 @@ export async function fetchCartoons() {
 
 export async function fetchAnime() {
   try {
-    const res = await fetch("https://love-music-backend.onrender.com/api/anime/");
+    const res = await fetch(`${BASE_API_URL}/anime/`);
     if (!res.ok) throw new Error("Anime API unreachable");
     return await res.json();
   } catch (e) {
@@ -193,7 +197,7 @@ export async function fetchAnime() {
 
 export async function resolveFullAudio(title, artist) {
   try {
-    const res = await fetch("https://love-music-backend.onrender.com/api/songs/resolve-audio/", {
+    const res = await fetch(`${BASE_API_URL}/songs/resolve-audio/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, artist }),
