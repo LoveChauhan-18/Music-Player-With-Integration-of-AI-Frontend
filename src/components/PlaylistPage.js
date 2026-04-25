@@ -100,9 +100,9 @@ export default function PlaylistPage({ playlist, currentSong, isPlaying, onPlay,
                 ) : i + 1}
               </div>
               <div className="song-row-info">
-                {song.artwork_url ? (
+                {song.artwork ? (
                   <img 
-                    src={song.artwork_url} 
+                    src={song.artwork} 
                     alt={song.title} 
                     style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover", marginRight: 12 }} 
                   />

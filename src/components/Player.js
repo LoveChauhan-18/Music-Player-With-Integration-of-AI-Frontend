@@ -7,36 +7,47 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   const [isMuted, setIsMuted] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0); // 0=off 1=all 2=one
   
+  const [duration, setDuration] = useState(currentSong?.duration || 200);
+  
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
-  const durationRef = useRef(currentSong?.duration || 200);
 
   // Reset progress when song changes
   useEffect(() => {
     setProgress(0);
-    durationRef.current = currentSong?.duration || 200;
+    setDuration(currentSong?.duration || 200);
   }, [currentSong?.id]);
 
   // Handle Play/Pause for Audio element
   useEffect(() => {
     if (audioRef.current) {
+      const wasPlaying = isPlaying;
+      const currentTime = audioRef.current.currentTime;
+
       if (isPlaying) {
         // Small delay to let audio element load new src
         const timer = setTimeout(() => {
-          audioRef.current?.play().catch(e => console.log("Audio play error:", e));
-        }, 100);
+          if (audioRef.current) {
+            // If the song ID is the same but the URL changed (resolved full audio), 
+            // try to preserve the time position
+            if (currentTime > 0 && currentTime < 30) {
+               audioRef.current.currentTime = currentTime;
+            }
+            audioRef.current.play().catch(e => console.log("Audio play error:", e));
+          }
+        }, 150);
         return () => clearTimeout(timer);
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentSong]);
+  }, [isPlaying, currentSong?.id, currentSong?.previewUrl]); // Trigger on URL change too
 
   // Sync Progress for both Real and Simulated Audio
   useEffect(() => {
     if (!currentSong) return;
     
-    durationRef.current = currentSong.duration || 200;
+    setDuration(currentSong.duration || 200);
 
     if (isPlaying) {
       if (!currentSong.previewUrl) {
@@ -44,7 +55,7 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
         intervalRef.current = setInterval(() => {
           setProgress((prev) => {
             const next = prev + 1;
-            if (next >= durationRef.current) {
+            if (next >= duration) {
               clearInterval(intervalRef.current);
               onNext();
               return 0;
@@ -69,7 +80,17 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
 
   const handleLoadedMetadata = () => {
     if (audioRef.current && currentSong?.previewUrl) {
-      durationRef.current = audioRef.current.duration;
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleAudioError = (e) => {
+    console.error("Audio playback error:", e);
+    if (currentSong?.isFullAudio) {
+      // If full audio failed, revert to preview and show message
+      // Note: we can't easily revert currentSong here without a callback, 
+      // but we can at least log it and inform the user.
+      alert(`⚠️ Full audio for "${currentSong.title}" could not be loaded. Please try again or check your connection.`);
     }
   };
 
@@ -122,11 +143,11 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     );
   }
 
-  const duration = currentSong.previewUrl ? durationRef.current : (currentSong.duration || 200);
-  const progressPct = Math.round((progress / duration) * 100);
+  const progressPct = Math.round((progress / (duration || 1)) * 100);
 
   return (
-    <footer className="player">
+    <footer className="player" style={{ "--player-color": currentSong.color || "var(--accent-purple)" }}>
+      <div className="player-ambient-glow" style={{ opacity: isPlaying ? 0.2 : 0.05 }} />
       {/* Hidden Audio Element */}
       {currentSong.previewUrl && (
         <audio
@@ -135,6 +156,7 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleEnded}
+          onError={handleAudioError}
         />
       )}
 
@@ -151,7 +173,12 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
           </div>
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="player-track-name">{currentSong.title}</div>
+          <div className="player-track-name" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {currentSong.title}
+            {currentSong.isFullAudio && (
+              <span className="badge-hq animate-fade-in" title="Playing High Quality Full Audio">HQ</span>
+            )}
+          </div>
           <div className="player-artist-name">{currentSong.artist}</div>
         </div>
         <button

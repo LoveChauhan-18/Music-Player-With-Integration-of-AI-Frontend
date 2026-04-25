@@ -1,8 +1,10 @@
 import React from "react";
 import { SONGS, formatDuration } from "../data/songs";
 
-export default function LikedSongsPage({ currentSong, isPlaying, onPlay, onLike, likedSongs }) {
-  const liked = SONGS.filter(s => likedSongs.includes(s.id));
+export default function LikedSongsPage({ currentSong, isPlaying, onPlay, onLike, likedSongs, allSongs = [] }) {
+  // Merge static SONGS with dynamic allSongs and filter by liked status
+  const songMap = new Map([...SONGS, ...allSongs].map(s => [s.id, s]));
+  const liked = Array.from(songMap.values()).filter(s => likedSongs.includes(s.id));
 
   return (
     <div className="page">

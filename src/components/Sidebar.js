@@ -31,11 +31,35 @@ export default function Sidebar({ activePage, setActivePage, likedSongs, playlis
     return "#10b981";
   };
 
+  const getMoodColor = () => {
+    switch (activePage) {
+      case 'mood': return '#8b5cf6';
+      case 'creator': return '#d946ef';
+      case 'explore': return '#10b981';
+      case 'podcasts': return '#f59e0b';
+      case 'liked': return '#ef4444';
+      default: return '#8b5cf6';
+    }
+  };
+
+  const moodColor = getMoodColor();
+
   return (
-    <aside className="sidebar" style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, overflowY: "auto" }}>
+    <aside 
+      className="sidebar" 
+      style={{ 
+        display: "flex", 
+        flexDirection: "column",
+        "--sidebar-mood-color": moodColor
+      }}
+    >
+      <div className="sidebar-ambient-glow" />
+      <div style={{ flex: 1, overflowY: "auto", position: 'relative', zIndex: 1 }}>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">🎵</div>
+          <div className="sidebar-logo-icon-wrapper">
+            <div className="sidebar-logo-icon">🎵</div>
+            <div className="sidebar-logo-pulse" />
+          </div>
           <span className="sidebar-logo-text">AI-Music-Player</span>
         </div>
 
@@ -100,32 +124,41 @@ export default function Sidebar({ activePage, setActivePage, likedSongs, playlis
         </div>
       </div>
 
-      <div className="sidebar-user" style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
-        {user ? (
-          <>
-            <div className="sidebar-user-avatar" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
-              {user[0].toUpperCase()}
-            </div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{user}</div>
-              <button 
-                className="btn-text" 
-                style={{ fontSize: 11, textAlign: "left", opacity: 0.6, padding: 0 }}
-                onClick={onLogout}
-              >
-                Logout Account
-              </button>
-            </div>
-          </>
-        ) : (
-          <button 
-            className="btn btn-primary" 
-            style={{ width: "100%", fontSize: 13, gap: 8 }}
-            onClick={() => setActivePage("auth")}
-          >
-            👤 Sign In
-          </button>
-        )}
+      <div className="sidebar-footer">
+        <div className="sidebar-user">
+          {user ? (
+            <>
+              <div className="sidebar-user-avatar" style={{ background: `linear-gradient(135deg, ${moodColor}, #06b6d4)` }}>
+                {user[0].toUpperCase()}
+              </div>
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{user}</div>
+                <button 
+                  className="btn-text" 
+                  style={{ fontSize: 11, textAlign: "left", opacity: 0.6, padding: 0 }}
+                  onClick={onLogout}
+                >
+                  Logout Account
+                </button>
+              </div>
+            </>
+          ) : (
+            <button 
+              className="btn btn-primary" 
+              style={{ width: "100%", fontSize: 13, gap: 8 }}
+              onClick={() => setActivePage("auth")}
+            >
+              👤 Sign In
+            </button>
+          )}
+        </div>
+
+        {/* Unique Feature: Ambient Visualizer Orb */}
+        <div className="sidebar-visualizer-orb">
+          <div className="orb-wave wave-1" />
+          <div className="orb-wave wave-2" />
+          <div className="orb-wave wave-3" />
+        </div>
       </div>
     </aside>
   );

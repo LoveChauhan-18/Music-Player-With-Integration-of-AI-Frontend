@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { EXPLORE_CATEGORIES } from "../services/musicApi";
+import { EXPLORE_CATEGORIES, syncLatestWithBackend } from "../services/musicApi";
 import { formatDuration } from "../data/songs";
 
 function SongCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLiked, categoryColor, playlists, onAddToPlaylist }) {
@@ -135,6 +135,19 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(20);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await syncLatestWithBackend();
+      alert("✨ Auto-Discovery Complete! Latest global hits have been added to the library.");
+    } catch (e) {
+      alert("Sync failed. Please try again later.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     setVisibleCount(20);
@@ -186,13 +199,27 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
   return (
     <div className="page">
       {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 className="section-title" style={{ fontSize: 28, marginBottom: 6 }}>
-          🌍 Explore Music
-        </h1>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-          Discover real songs from around the world — powered by iTunes.
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+        <div>
+          <h1 className="section-title" style={{ fontSize: 28, marginBottom: 6 }}>
+            🌍 Explore Music
+          </h1>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+            Discover real songs from around the world — powered by iTunes.
+          </p>
+        </div>
+        <button 
+          className={`btn ${isSyncing ? "btn-secondary" : "btn-primary"}`}
+          onClick={handleSync}
+          disabled={isSyncing}
+          style={{ 
+            display: "flex", alignItems: "center", gap: 8,
+            boxShadow: isSyncing ? "none" : "0 8px 24px rgba(139, 92, 246, 0.3)",
+            animation: isSyncing ? "pulse 2s infinite" : "none"
+          }}
+        >
+          {isSyncing ? "⌛ Syncing Latest..." : "✨ Auto-Sync Latest Hits"}
+        </button>
       </div>
 
       {/* Category Hero Cards */}
@@ -286,7 +313,7 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
                 <button
                   className="btn btn-primary"
                   style={{ background: cat.gradient, border: "none" }}
-                  onClick={() => filteredSongs.length > 0 && onPlay(filteredSongs[0])}
+                  onClick={() => filteredSongs.length > 0 && onPlay(filteredSongs[0], filteredSongs)}
                 >
                   ▶ Play All
                 </button>
@@ -360,7 +387,7 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
                     song={song}
                     isCurrentSong={currentSong?.id === song.id}
                     isPlaying={isPlaying}
-                    onPlay={onPlay}
+                    onPlay={(s) => onPlay(s, filteredSongs)}
                     onLike={onLike}
                     isLiked={likedSongs.includes(song.id)}
                     categoryColor={cat.color}

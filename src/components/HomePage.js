@@ -141,7 +141,7 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
             <div
               key={song.id}
               className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
-              onClick={() => onPlay(song)}
+              onClick={() => onPlay(song, latestSongs)}
               style={{ overflow: activeSongMenu === song.id ? "visible" : undefined }}
             >
               <div className="song-card-art">
@@ -230,7 +230,7 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
           <div
             key={song.id}
             className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
-            onClick={() => onPlay(song)}
+            onClick={() => onPlay(song, trending)}
           >
             <div className="song-card-art">
               <div className="song-card-art-placeholder" style={{
@@ -291,7 +291,7 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
             index={i}
             isPlaying={isPlaying}
             isCurrentSong={currentSong?.id === song.id}
-            onPlay={onPlay}
+            onPlay={(s) => onPlay(s, recent)}
             onLike={onLike}
             isLiked={likedSongs.includes(song.id)}
             playlists={playlists}

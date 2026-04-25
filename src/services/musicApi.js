@@ -119,6 +119,25 @@ export async function fetchLatestGlobal() {
   }
 }
 
+/**
+ * Fetches mood-specific songs across all global regions (India, US, Korea, Japan)
+ * and merges them into one massive multi-cultural recommendation set.
+ */
+export async function fetchGlobalMoodSongs(moodLabel, limit = 40) {
+  try {
+    const results = await Promise.all([
+      fetchITunes(`${moodLabel} bollywood hindi`, limit, "in"),
+      fetchITunes(`${moodLabel} pop hollywood hits`, limit, "us"),
+      fetchITunes(`${moodLabel} kpop hits`, limit, "kr"),
+      fetchITunes(`${moodLabel} jpop anime hits`, limit, "jp"),
+    ]);
+    return dedupe(results.flat());
+  } catch (e) {
+    console.error("Global mood fetch error:", e);
+    return [];
+  }
+}
+
 export async function searchMusic(query, limit = 20) {
   try {
     return await fetchITunes(query, limit, "us");
@@ -159,6 +178,24 @@ export async function fetchLocalLibrary() {
   } catch (e) {
     console.error("Local Library fetch error:", e);
     return [];
+  }
+}
+
+/**
+ * Triggers the Django backend to sync the latest global hits from iTunes
+ * into the local database automatically.
+ */
+export async function syncLatestWithBackend() {
+  try {
+    const res = await fetch(`${BASE_API_URL}/songs/sync/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!res.ok) throw new Error("Sync failed");
+    return await res.json();
+  } catch (e) {
+    console.error("Auto-sync error:", e);
+    throw e;
   }
 }
 

@@ -53,12 +53,26 @@ export default function App() {
       }
 
       // 2. Initial Queue (800+ songs from local library)
-      const { fetchLocalLibrary } = await import("./services/musicApi");
+      const { fetchLocalLibrary, syncLatestWithBackend } = await import("./services/musicApi");
       const lib = await fetchLocalLibrary();
       if (lib.length > 0) {
         setQueue(lib);
         setLibraryFetched(true);
       }
+
+      // 3. Background Sync (Trigger auto-discovery of latest hits after 5s)
+      setTimeout(async () => {
+        try {
+          console.log("🚀 Starting background sync for latest global hits...");
+          await syncLatestWithBackend();
+          // After sync, refresh the local library to show new hits
+          const updatedLib = await fetchLocalLibrary();
+          setQueue(updatedLib);
+          console.log("✅ Background sync complete.");
+        } catch (e) {
+          console.warn("Background sync failed:", e);
+        }
+      }, 5000);
     };
     initApp();
   }, []);
@@ -94,16 +108,16 @@ export default function App() {
       }
       
       const msg = song.source === "itunes" 
-        ? `Playing: ${song.title} (resolving full audio...)` 
+        ? `🎵 Playing Preview: Resolving full audio for "${song.title}"...` 
         : `Now playing: ${song.title}`;
-      showToast(msg, "info", "🎵");
+      showToast(msg, "info", "✨");
 
       // 3. Resolve Full Audio in background
       if (song.source === "itunes" || (song.source === "local" && !song.audio_file)) {
         try {
           const fullAudioUrl = await resolve_with_timeout(
             resolveFullAudio(song.title, song.artist),
-            8000
+            15000
           );
           
           if (fullAudioUrl) {
@@ -296,6 +310,7 @@ export default function App() {
             currentSong={currentSong}
             isPlaying={isPlaying}
             onPlay={handlePlay}
+            allSongs={queue}
           />
         );
       case "explore":
@@ -334,6 +349,7 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
+            allSongs={queue}
           />
         );
       case "auth":
@@ -421,7 +437,6 @@ export default function App() {
           {renderPage()}
         </main>
 
-        {/* Music Player */}
         <Player
           currentSong={currentSong}
           isPlaying={isPlaying}
@@ -433,6 +448,38 @@ export default function App() {
           isShuffled={isShuffled}
           onToggleShuffle={handleToggleShuffle}
         />
+
+        {/* Mobile Navigation Bar */}
+        <nav className="mobile-nav">
+          <button 
+            className={`mobile-nav-item ${activePage === "home" ? "active" : ""}`}
+            onClick={() => setActivePage("home")}
+          >
+            <span className="mobile-nav-icon">🏠</span>
+            <span>Home</span>
+          </button>
+          <button 
+            className={`mobile-nav-item ${activePage === "explore" ? "active" : ""}`}
+            onClick={() => setActivePage("explore")}
+          >
+            <span className="mobile-nav-icon">🌍</span>
+            <span>Explore</span>
+          </button>
+          <button 
+            className={`mobile-nav-item ${activePage === "search" ? "active" : ""}`}
+            onClick={() => setActivePage("search")}
+          >
+            <span className="mobile-nav-icon">🔍</span>
+            <span>Search</span>
+          </button>
+          <button 
+            className={`mobile-nav-item ${activePage === "mood" ? "active" : ""}`}
+            onClick={() => setActivePage("mood")}
+          >
+            <span className="mobile-nav-icon">🧠</span>
+            <span>Mood</span>
+          </button>
+        </nav>
       </div>
 
       {/* Toast Notifications */}
