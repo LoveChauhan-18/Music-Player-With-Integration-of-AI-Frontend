@@ -112,25 +112,31 @@ export default function App() {
         : `Now playing: ${song.title}`;
       showToast(msg, "info", "✨");
 
-      // 3. Resolve Full Audio in background
-      if (song.source === "itunes" || (song.source === "local" && !song.audio_file)) {
+      // 3. Resolve Full Audio in background via yt-dlp backend
+      // Triggers for: all iTunes songs (needsFullAudio flag) OR local songs missing audio
+      const needsResolve = song.needsFullAudio || song.source === "itunes" || (song.source === "local" && !song.audio_file && !song.previewUrl?.includes('/media/'));
+      if (needsResolve) {
         try {
           const fullAudioUrl = await resolve_with_timeout(
             resolveFullAudio(song.title, song.artist),
-            15000
+            20000  // 20s timeout for slower connections
           );
           
           if (fullAudioUrl) {
             setCurrentSong(prev => {
               if (prev?.id === song.id) {
-                return { ...prev, previewUrl: fullAudioUrl, isFullAudio: true };
+                return { ...prev, previewUrl: fullAudioUrl, isFullAudio: true, needsFullAudio: false };
               }
               return prev;
             });
-            showToast(`✨ Switched to full audio for "${song.title}"`, "success", "🔥");
+            showToast(`✨ Full song loaded: "${song.title}"`, "success", "🔥");
+          } else {
+            // Backend couldn't resolve — keep playing the iTunes 30-sec preview
+            showToast(`Playing 30-sec preview for "${song.title}" (backend unavailable)`, "info", "ℹ️");
           }
         } catch (e) {
-          console.warn("Could not resolve full audio, sticking with preview.");
+          // Timeout or network error — keep playing preview silently
+          console.warn("Full audio resolution timed out, playing preview instead.");
         }
       }
     }

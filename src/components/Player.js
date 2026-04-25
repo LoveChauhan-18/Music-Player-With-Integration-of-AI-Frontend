@@ -21,17 +21,16 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   // Handle Play/Pause for Audio element
   useEffect(() => {
     if (audioRef.current) {
-      const wasPlaying = isPlaying;
       const currentTime = audioRef.current.currentTime;
 
       if (isPlaying) {
         // Small delay to let audio element load new src
         const timer = setTimeout(() => {
           if (audioRef.current) {
-            // If the song ID is the same but the URL changed (resolved full audio), 
-            // try to preserve the time position
-            if (currentTime > 0 && currentTime < 30) {
-               audioRef.current.currentTime = currentTime;
+            // Preserve playback position when URL switches (e.g. preview -> full audio)
+            // No cap on currentTime — previously `< 30` was cutting off full songs!
+            if (currentTime > 0) {
+              audioRef.current.currentTime = currentTime;
             }
             audioRef.current.play().catch(e => console.log("Audio play error:", e));
           }
@@ -87,10 +86,8 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   const handleAudioError = (e) => {
     console.error("Audio playback error:", e);
     if (currentSong?.isFullAudio) {
-      // If full audio failed, revert to preview and show message
-      // Note: we can't easily revert currentSong here without a callback, 
-      // but we can at least log it and inform the user.
-      alert(`⚠️ Full audio for "${currentSong.title}" could not be loaded. Please try again or check your connection.`);
+      // Full audio failed to load — log it, don't block the user with an alert
+      console.warn(`Full audio for "${currentSong.title}" could not be loaded.`);
     }
   };
 

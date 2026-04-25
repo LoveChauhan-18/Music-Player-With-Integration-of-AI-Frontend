@@ -19,11 +19,13 @@ async function fetchITunes(term, limit = 20, country = "us") {
       title: track.trackName,
       artist: track.artistName,
       album: track.collectionName || "Single",
+      // Store the REAL duration from iTunes metadata (in seconds)
       duration: Math.floor((track.trackTimeMillis || 30000) / 1000),
       genre: track.primaryGenreName || "Music",
       artwork: track.artworkUrl100?.replace("100x100", "300x300") || null,
       artworkSmall: track.artworkUrl100 || null,
-      previewUrl: track.previewUrl, // 30-second real audio preview
+      // previewUrl is the 30-sec iTunes preview; full audio is resolved via yt-dlp
+      previewUrl: track.previewUrl,
       year: track.releaseDate
         ? new Date(track.releaseDate).getFullYear()
         : 2024,
@@ -32,6 +34,8 @@ async function fetchITunes(term, limit = 20, country = "us") {
       color: "#8b5cf6",
       mood: ["happy", "energetic"],
       source: "itunes",
+      // Flag: always resolve to full audio via backend yt-dlp on play
+      needsFullAudio: true,
     }));
 }
 
@@ -165,10 +169,12 @@ export async function fetchLocalLibrary() {
       title: track.title,
       artist: track.artist?.name || "Unknown Artist",
       album: track.album || "Local Album",
-      duration: 30, // Preview length
+      // Let the audio element determine the real duration — do NOT hardcode 30
+      duration: track.duration || null,
       genre: track.genre || "Music",
       artwork: track.artwork_url,
-      previewUrl: track.preview_url || track.audio_file,
+      // Use audio_file (full song) preferentially; fall back to preview_url
+      previewUrl: track.audio_file || track.preview_url,
       year: 2026,
       plays: track.plays || 0,
       emoji: "🎵",
