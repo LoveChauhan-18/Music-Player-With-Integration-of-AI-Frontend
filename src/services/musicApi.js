@@ -1,4 +1,4 @@
-// src/services/musicApi.js
+// src/services/musicApi.js - Updated 2026-04-26
 // Uses the iTunes Search API - free, no key required, supports CORS
 
 const BASE_URL = "https://itunes.apple.com/search";
