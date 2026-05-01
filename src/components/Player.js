@@ -18,29 +18,36 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     setDuration(currentSong?.duration || 200);
   }, [currentSong?.id]);
 
-  // Handle Play/Pause for Audio element
+  // Handle Play/Pause and URL changes
   useEffect(() => {
     if (audioRef.current) {
-      const currentTime = audioRef.current.currentTime;
+      const audio = audioRef.current;
+      const prevTime = audio.currentTime;
 
       if (isPlaying) {
-        // Small delay to let audio element load new src
-        const timer = setTimeout(() => {
-          if (audioRef.current) {
-            // Preserve playback position when URL switches (e.g. preview -> full audio)
-            // No cap on currentTime — previously `< 30` was cutting off full songs!
-            if (currentTime > 0) {
-              audioRef.current.currentTime = currentTime;
-            }
-            audioRef.current.play().catch(e => console.log("Audio play error:", e));
+        // Function to restore position and play once new URL metadata is loaded
+        const handleMetadata = () => {
+          if (prevTime > 0) {
+            audio.currentTime = prevTime;
           }
-        }, 150);
-        return () => clearTimeout(timer);
+          audio.play().catch(e => console.log("Playback error:", e));
+          audio.removeEventListener('loadedmetadata', handleMetadata);
+        };
+
+        // When the previewUrl changes, explicitly reload the audio element
+        if (currentSong?.previewUrl) {
+          audio.addEventListener('loadedmetadata', handleMetadata);
+          audio.load(); // Trigger reload for the new src
+          audio.play().catch(e => {
+            // Play might fail if load() is still in progress, but handleMetadata will catch it
+            console.log("Initial play attempt:", e);
+          });
+        }
       } else {
-        audioRef.current.pause();
+        audio.pause();
       }
     }
-  }, [isPlaying, currentSong?.id, currentSong?.previewUrl]); // Trigger on URL change too
+  }, [isPlaying, currentSong?.id, currentSong?.previewUrl]);
 
   // Sync Progress for both Real and Simulated Audio
   useEffect(() => {
