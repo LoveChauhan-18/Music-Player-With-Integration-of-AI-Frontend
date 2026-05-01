@@ -132,11 +132,13 @@ export default function App() {
             showToast(`✨ Full song loaded: "${song.title}"`, "success", "🔥");
           } else {
             // Backend couldn't resolve — keep playing the iTunes 30-sec preview
-            showToast(`Playing 30-sec preview for "${song.title}" (backend unavailable)`, "info", "ℹ️");
+            console.warn(`Backend resolution failed for "${song.title}". Falling back to 30s preview.`);
+            showToast(`⚠️ Full audio unavailable. Playing 30-sec preview for "${song.title}".`, "warning", "ℹ️");
           }
         } catch (e) {
           // Timeout or network error — keep playing preview silently
           console.warn("Full audio resolution timed out, playing preview instead.");
+          showToast(`⏳ Resolution timed out. Playing preview for "${song.title}".`, "info", "⏱️");
         }
       }
     }

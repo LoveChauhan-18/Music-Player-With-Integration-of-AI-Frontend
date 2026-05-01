@@ -142,7 +142,7 @@ export async function fetchGlobalMoodSongs(moodLabel, limit = 40) {
   }
 }
 
-export async function searchMusic(query, limit = 20) {
+export async function searchMusic(query, limit = 50) {
   try {
     return await fetchITunes(query, limit, "us");
   } catch (e) {
