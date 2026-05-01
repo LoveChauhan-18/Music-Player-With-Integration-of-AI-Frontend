@@ -8,6 +8,10 @@ const SONG_THEMES = [
   "Friendship", "Social Justice", "Fantasy", "Late Night Vibes", "Custom",
 ];
 
+const SONG_LANGUAGES = [
+  "English", "Hindi", "Spanish", "French", "German", "Japanese", "Korean", "Italian", "Chinese", "Arabic", "Portuguese", "Dutch", "Turkish", "Indonesian"
+];
+
 const GENERATION_STEPS = [
   { label: "Analyzing theme & lyrics...", icon: "📝" },
   { label: "Composing melody structure...", icon: "🎼" },
@@ -22,6 +26,7 @@ export default function SongCreatorPage({ onAddGenerated }) {
   const [customTheme, setCustomTheme] = useState("");
   const [voice, setVoice] = useState("");
   const [genre, setGenre] = useState("");
+  const [language, setLanguage] = useState("English");
   const [tempo, setTempo] = useState("Medium");
   const [lyrics, setLyrics] = useState("");
   const [songTitle, setSongTitle] = useState("");
@@ -35,6 +40,23 @@ export default function SongCreatorPage({ onAddGenerated }) {
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [customVoiceAdded, setCustomVoiceAdded] = useState(false);
 
+  // Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+
+  useEffect(() => {
+    let timer;
+    if (isRecording) {
+      timer = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } else {
+      setRecordingTime(0);
+    }
+    return () => clearInterval(timer);
+  }, [isRecording]);
+
   useEffect(() => {
     async function loadVoices() {
       const voices = await fetchAIVoices();
@@ -47,15 +69,49 @@ export default function SongCreatorPage({ onAddGenerated }) {
 
   const isFormValid = (theme || customTheme) && voice && lyrics.trim().length > 10;
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        setRecordedBlob(blob);
+        setRecordedAudioUrl(url);
+      };
+      
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordedAudioUrl(null);
+    } catch (err) {
+      alert("Microphone access denied or not available.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleRecordAgain = () => {
+    setRecordedAudioUrl(null);
+    setRecordedBlob(null);
+    startRecording();
+  };
+
   const handleGenerate = async () => {
     if (!isFormValid) return;
     setGenerating(true);
     setGeneratedSong(null);
     setGenStep(0);
 
-    // If it's an ElevenLabs voice, we could call the real API here
-    // For this demo, we'll still show the progress steps but call the backend at the "vocal" step
-    
     let step = 0;
     let finalAudioUrl = null;
 
@@ -63,7 +119,6 @@ export default function SongCreatorPage({ onAddGenerated }) {
       step++;
       setGenStep(step);
       
-      // Real API Call during the "Synthesizing" step
       if (step === 2 && voice.startsWith("eleven_")) {
         try {
           const result = await generateAIVocal(lyrics.substring(0, 500), voice.replace("eleven_", ""));
@@ -95,16 +150,15 @@ export default function SongCreatorPage({ onAddGenerated }) {
             year: 2026,
             plays: 0,
             isAIGenerated: true,
-            // If it was a real ElevenLabs generation, we'd use that URL
-            previewUrl: finalAudioUrl || (voice.startsWith("eleven_") ? "https://elevenlabs.io/sample-vocal.mp3" : null),
-            meta: { theme: finalTheme, voice, genre, tempo, lyrics },
+            previewUrl: finalAudioUrl || (voice.startsWith("eleven_") ? "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" : null),
+            meta: { theme: finalTheme, voice, genre, tempo, lyrics, language },
           };
           setGeneratedSong(generated);
           setGenerating(false);
           if (onAddGenerated) onAddGenerated(generated);
         }, 600);
       }
-    }, 1200); // Slightly slower for "realism"
+    }, 1200);
   };
 
   const handleReset = () => {
@@ -113,15 +167,15 @@ export default function SongCreatorPage({ onAddGenerated }) {
     setCustomTheme("");
     setVoice("");
     setGenre("");
+    setLanguage("English");
     setTempo("Medium");
     setLyrics("");
     setSongTitle("");
     setGenStep(0);
   };
 
-  const handleVoiceUpload = () => {
+  const handleVoiceUpload = (fileOrBlob) => {
     setIsUploadingVoice(true);
-    // Simulate voice cloning process
     setTimeout(() => {
       setIsUploadingVoice(false);
       setCustomVoiceAdded(true);
@@ -241,6 +295,20 @@ export default function SongCreatorPage({ onAddGenerated }) {
                   {customVoiceAdded ? "🎤 Voice Added" : "🎤 Add your voice"}
                 </button>
               </div>
+            </div>
+
+            {/* Language */}
+            <div className="form-field">
+              <label className="form-label">Song Language *</label>
+              <select
+                className="form-select"
+                value={language}
+                onChange={e => setLanguage(e.target.value)}
+              >
+                {SONG_LANGUAGES.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
             </div>
 
             {/* Genre */}
@@ -440,20 +508,79 @@ export default function SongCreatorPage({ onAddGenerated }) {
             </p>
 
             {!isUploadingVoice ? (
-              <>
-                <div className="upload-zone" onClick={handleVoiceUpload}>
-                  <span className="upload-icon">📁</span>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Click to upload audio</div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>WAV, MP3 or M4A (Max 10MB)</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div className={`upload-zone ${isRecording ? 'recording' : ''} ${recordedAudioUrl ? 'preview' : ''}`} 
+                  onClick={() => !isRecording && !recordedAudioUrl && startRecording()}
+                  style={{ position: 'relative', overflow: 'hidden' }}
+                >
+                  {isRecording ? (
+                    <>
+                      <div className="recording-pulse"></div>
+                      <span className="upload-icon" style={{ animation: 'pulse 1.5s infinite' }}>🎙️</span>
+                      <div style={{ fontWeight: 700, fontSize: 24, marginBottom: 8, color: '#ef4444' }}>
+                        {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>Recording your voice...</div>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ marginTop: 20, background: '#ef4444', borderColor: '#ef4444' }}
+                        onClick={(e) => { e.stopPropagation(); stopRecording(); }}
+                      >
+                        ⏹ Stop Recording
+                      </button>
+                    </>
+                  ) : recordedAudioUrl ? (
+                    <>
+                      <span className="upload-icon">🔊</span>
+                      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>Recording Captured!</div>
+                      
+                      <audio src={recordedAudioUrl} controls style={{ width: '100%', marginBottom: 20, height: 32 }} />
+
+                      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                        <button 
+                          className="btn btn-primary" 
+                          style={{ flex: 1 }}
+                          onClick={() => handleVoiceUpload(recordedBlob)}
+                        >
+                          ✨ Use This Voice
+                        </button>
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ flex: 1 }}
+                          onClick={handleRecordAgain}
+                        >
+                          🔄 Record Again
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="upload-icon">📁</span>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>Click to upload audio</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>WAV, MP3 or M4A (Max 10MB)</div>
+                      
+                      <div style={{ margin: '15px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>OR</span>
+                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                      </div>
+
+                      <button className="btn btn-primary" style={{ width: '100%', gap: 8 }} onClick={(e) => { e.stopPropagation(); startRecording(); }}>
+                        🎙️ Start Live Recording
+                      </button>
+                    </>
+                  )}
                 </div>
                 
-                <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12, padding: "12px", background: "rgba(6, 182, 212, 0.05)", borderRadius: 12, border: "1px solid rgba(6, 182, 212, 0.1)" }}>
-                  <span style={{ fontSize: 20 }}>💡</span>
-                  <p style={{ fontSize: 12, color: "var(--accent-cyan)", margin: 0 }}>
-                    Tip: For best results, use a quiet room and avoid background music.
-                  </p>
-                </div>
-              </>
+                {!isRecording && (
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, padding: "12px", background: "rgba(6, 182, 212, 0.05)", borderRadius: 12, border: "1px solid rgba(6, 182, 212, 0.1)" }}>
+                    <span style={{ fontSize: 20 }}>💡</span>
+                    <p style={{ fontSize: 12, color: "var(--accent-cyan)", margin: 0 }}>
+                      Tip: Speak clearly for about 30 seconds for the best AI clone quality.
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <div className="spinner" style={{ margin: "0 auto 20px" }}></div>
