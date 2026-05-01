@@ -263,6 +263,39 @@ export async function resolveFullAudio(title, artist) {
   }
 }
 
+/**
+ * Fetches available AI voices from ElevenLabs (via backend)
+ */
+export async function fetchAIVoices() {
+  try {
+    const res = await fetch(`${BASE_API_URL}/ai/voices/`);
+    if (!res.ok) throw new Error("Voices API unreachable");
+    const data = await res.json();
+    return data.voices || data; // Handle different API response structures
+  } catch (e) {
+    console.error("AI Voices fetch error:", e);
+    return [];
+  }
+}
+
+/**
+ * Generates an AI vocal track for given text and voice
+ */
+export async function generateAIVocal(text, voiceId) {
+  try {
+    const res = await fetch(`${BASE_API_URL}/ai/generate-vocal/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice_id: voiceId }),
+    });
+    if (!res.ok) throw new Error("Vocal generation failed");
+    return await res.json();
+  } catch (e) {
+    console.error("Vocal generation error:", e);
+    throw e;
+  }
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function dedupe(arr) {
