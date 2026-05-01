@@ -239,17 +239,26 @@ export async function fetchAnime() {
 }
 
 export async function resolveFullAudio(title, artist) {
+  console.log(`🌐 Requesting full audio for: ${artist} - ${title}`);
   try {
     const res = await fetch(`${BASE_API_URL}/songs/resolve-audio/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, artist }),
     });
-    if (!res.ok) throw new Error("Audio resolution failed");
+    if (!res.ok) {
+      console.warn(`❌ Backend resolution HTTP error: ${res.status}`);
+      return null;
+    }
     const data = await res.json();
-    return data.audio_url;
+    if (data.audio_url) {
+      console.log(`✅ Received full audio URL: ${data.audio_url.substring(0, 50)}...`);
+      return data.audio_url;
+    }
+    console.warn("⚠️ Backend returned no audio_url", data);
+    return null;
   } catch (e) {
-    console.error("Full audio resolution error:", e);
+    console.error("❌ Full audio resolution fetch error:", e);
     return null;
   }
 }
