@@ -149,16 +149,35 @@ export default function SongCreatorPage({ onAddGenerated }) {
             {/* Voice Type */}
             <div className="form-field">
               <label className="form-label">Voice Type *</label>
-              <select
-                className="form-select"
-                value={voice}
-                onChange={e => setVoice(e.target.value)}
-              >
-                <option value="">Select voice type...</option>
-                {VOICE_TYPES.map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <div style={{ display: "flex", gap: 10 }}>
+                <select
+                  className="form-select"
+                  value={voice}
+                  onChange={e => setVoice(e.target.value)}
+                  style={{ flex: 1 }}
+                >
+                  <option value="">Select voice type...</option>
+                  {VOICE_TYPES.map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                  <option value="user_voice">Custom Voice (Added)</option>
+                </select>
+                <button
+                  className="btn btn-secondary"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "0 16px", height: "42px", fontSize: 12,
+                    background: voice === "user_voice" ? "rgba(6,182,212,0.2)" : undefined,
+                    borderColor: voice === "user_voice" ? "var(--accent-cyan)" : undefined,
+                  }}
+                  onClick={() => {
+                    setVoice("user_voice");
+                    alert("🎤 Voice feature: In a real app, this would open a recording/upload modal. Voice added successfully!");
+                  }}
+                >
+                  🎤 Add your voice
+                </button>
+              </div>
             </div>
 
             {/* Genre */}
