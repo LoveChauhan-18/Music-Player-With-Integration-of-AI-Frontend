@@ -124,9 +124,13 @@ export default function SongCreatorPage({ onAddGenerated }) {
           const result = await generateAIVocal(lyrics.substring(0, 500), voice.replace("eleven_", ""));
           if (result && result.audio_url) {
             finalAudioUrl = result.audio_url;
+            if (result.error) {
+              alert("Backend Error: " + result.error);
+            }
           }
         } catch (e) {
-          console.error("Real vocal generation failed, falling back to simulation", e);
+          console.error("Real vocal generation failed", e);
+          alert("Generation Failed: Check your ElevenLabs credits or API Key.");
         }
       }
 
