@@ -53,6 +53,7 @@ export const MOODS = [
 ];
 
 export const VOICE_TYPES = [
+  "ElevenLabs Rachel (Premium)", "ElevenLabs Josh (Deep)", "ElevenLabs Adam (Narrative)",
   "Male Tenor", "Male Baritone", "Male Bass",
   "Female Soprano", "Female Alto", "Female Mezzo-Soprano",
   "Androgynous", "Raspy", "Smooth R&B", "Electronic/Vocoder"
