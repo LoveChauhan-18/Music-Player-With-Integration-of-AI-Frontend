@@ -119,7 +119,7 @@ export default function App() {
         try {
           const fullAudioUrl = await resolve_with_timeout(
             resolveFullAudio(song.title, song.artist),
-            30000  // 30s timeout for slower connections / cold starts
+            60000  // 60s timeout for slower connections / cold starts
           );
           
           if (fullAudioUrl) {
