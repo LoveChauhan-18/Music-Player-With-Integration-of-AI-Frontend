@@ -1669,8 +1669,13 @@
 /* ===================== ADVANCED PLAYER ANIMATIONS ===================== */
 .player {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow 0.5s ease;
+  z-index: 200;
+  background: rgba(10, 10, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .player::before {

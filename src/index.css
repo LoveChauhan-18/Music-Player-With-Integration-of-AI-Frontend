@@ -599,3 +599,28 @@ input[type="range"]:hover::-webkit-slider-thumb {
   color: white;
   padding-left: 20px;
 }
+
+/* AI Dancers Animations */
+.ai-dancers div {
+  transform-origin: bottom center;
+}
+
+@keyframes dance1 {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-15px) rotate(-10deg) scale(1.1); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-10px) rotate(10deg) scale(1.05); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+@keyframes dance2 {
+  0% { transform: translateY(0) scaleX(1); }
+  50% { transform: translateY(-20px) scaleX(-1); }
+  100% { transform: translateY(0) scaleX(1); }
+}
+
+@keyframes dance3 {
+  0% { transform: rotate(-15deg) scale(1); }
+  50% { transform: rotate(15deg) scale(1.2); }
+  100% { transform: rotate(-15deg) scale(1); }
+}

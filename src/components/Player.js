@@ -222,9 +222,18 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
 
       {/* Controls */}
       <div className="player-controls">
-        <div className="player-buttons">
+        <div className="player-buttons" style={{ position: "relative" }}>
+          {/* Left Dancers */}
+          {isPlaying && (
+            <div className="ai-dancers" style={{ position: "absolute", left: "-80px", fontSize: "24px", pointerEvents: "none", display: "flex", gap: "10px" }}>
+              <div style={{ animation: "dance3 1s infinite alternate" }}>👯</div>
+              <div style={{ animation: "dance1 1.2s infinite alternate" }}>🕺</div>
+            </div>
+          )}
+
           <button 
             className={`player-control-btn ${isShuffled ? "active" : ""}`} 
+
             onClick={onToggleShuffle}
             title="Shuffle"
           >
@@ -277,6 +286,14 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
               {repeatMode === 2 && <text x="9" y="15" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">1</text>}
             </svg>
           </button>
+
+          {/* Right Dancers */}
+          {isPlaying && (
+            <div className="ai-dancers" style={{ position: "absolute", right: "-80px", fontSize: "24px", pointerEvents: "none", display: "flex", gap: "10px" }}>
+              <div style={{ animation: "dance2 1s infinite alternate" }}>💃</div>
+              <div style={{ animation: "dance3 1.1s infinite alternate" }}>👯</div>
+            </div>
+          )}
         </div>
 
         <div className="player-progress">
