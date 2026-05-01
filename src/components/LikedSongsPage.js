@@ -2,9 +2,32 @@ import React from "react";
 import { SONGS, formatDuration } from "../data/songs";
 
 export default function LikedSongsPage({ currentSong, isPlaying, onPlay, onLike, likedSongs, allSongs = [] }) {
-  // Merge static SONGS with dynamic allSongs and filter by liked status
-  const songMap = new Map([...SONGS, ...allSongs].map(s => [s.id, s]));
-  const liked = Array.from(songMap.values()).filter(s => likedSongs.includes(s.id));
+  // Deduplicate songs by ID to prevent double listings
+  // Combine static SONGS with the dynamic allSongs (which contains synced liked songs)
+  const songMap = new Map();
+  
+  // Add static songs first
+  SONGS.forEach(s => songMap.set(s.id, s));
+  
+  // Add/Overwrite with dynamic songs from backend (they often have more up-to-date metadata)
+  allSongs.forEach(s => {
+    if (s && s.id) songMap.set(s.id, s);
+  });
+
+  // Filter the final map by the likedSongs IDs provided by App.js
+  const rawLiked = likedSongs
+    .map(id => songMap.get(id))
+    .filter(s => s !== undefined);
+
+  // Final deduplication layer to ensure no song is listed twice
+  const liked = [];
+  const seenIds = new Set();
+  rawLiked.forEach(s => {
+    if (!seenIds.has(s.id)) {
+      liked.push(s);
+      seenIds.add(s.id);
+    }
+  });
 
   return (
     <div className="page">
@@ -71,17 +94,40 @@ export default function LikedSongsPage({ currentSong, isPlaying, onPlay, onLike,
                   ) : i + 1}
                 </div>
                 <div className="song-row-info">
-                  <div className="song-row-thumb-placeholder" style={{
-                    background: `linear-gradient(135deg, ${song.color}88, ${song.color}33)`,
-                  }}>
-                    {song.emoji}
-                  </div>
+                  { (song.artwork || song.artwork_url) ? (
+                    <img 
+                      src={song.artwork || song.artwork_url} 
+                      alt="" 
+                      style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover", marginRight: 12 }} 
+                    />
+                  ) : (
+                    <div className="song-row-thumb-placeholder" style={{
+                      background: `linear-gradient(135deg, ${song.color || '#8b5cf6'}88, ${song.color || '#8b5cf6'}33)`,
+                      marginRight: 12
+                    }}>
+                      {song.emoji || '🎵'}
+                    </div>
+                  )}
                   <div>
                     <div className="song-row-name">{song.title}</div>
-                    <div className="song-row-artist">{song.artist}</div>
+                    <div className="song-row-artist">{typeof song.artist === 'object' ? song.artist.name : song.artist}</div>
                   </div>
                 </div>
-                <div className="song-row-album">{song.album}</div>
+                <div className="song-row-album" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {song.source === "itunes" && (
+                    <button
+                      className="btn-preview"
+                      onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+                      title="Play 30s Preview"
+                      style={{ height: 24, padding: "0 8px", fontSize: 9 }}
+                    >
+                      PREVIEW
+                    </button>
+                  )}
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {song.album}
+                  </span>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
                   <button
                     className="player-like-btn liked"

@@ -17,6 +17,8 @@ import AuthPage from "./components/AuthPage";
 import PodcastPage from "./components/PodcastPage";
 import CartoonPage from "./components/CartoonPage";
 import AnimePage from "./components/AnimePage";
+import VoiceControl from "./components/VoiceControl";
+
 
 import { SONGS } from "./data/songs";
 import { authService } from "./services/authService";
@@ -24,8 +26,60 @@ import { playlistService } from "./services/playlistService";
 
 let toastId = 0;
 
+const GalaxyBackground = () => (
+  <div className="galaxy-bg">
+    <div className="celestial moon">🌙</div>
+    <div className="celestial sun">☀️</div>
+    <div className="celestial planet planet-1">🪐</div>
+    <div className="celestial planet planet-2">🌍</div>
+    <div className="celestial planet planet-3">🌕</div>
+    {Array.from({ length: 40 }).map((_, i) => (
+      <div 
+        key={i} 
+        className="celestial star" 
+        style={{ 
+          top: `${Math.random() * 100}%`, 
+          left: `${Math.random() * 100}%`, 
+          animationDelay: `${Math.random() * 5}s`,
+          animationDuration: `${Math.random() * 3 + 2}s`,
+          fontSize: `${Math.random() * 8 + 6}px`
+        }}
+      >
+        ⭐
+      </div>
+    ))}
+  </div>
+);
+
 export default function App() {
   const [activePage, setActivePage] = useState("home");
+  const [history, setHistory] = useState(["home"]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const handleNavigate = useCallback((page) => {
+    if (page === activePage) return;
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(page);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    setActivePage(page);
+  }, [activePage, history, historyIndex]);
+
+  const goBack = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevPage = history[historyIndex - 1];
+      setHistoryIndex(historyIndex - 1);
+      setActivePage(prevPage);
+    }
+  }, [history, historyIndex]);
+
+  const goForward = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextPage = history[historyIndex + 1];
+      setHistoryIndex(historyIndex + 1);
+      setActivePage(nextPage);
+    }
+  }, [history, historyIndex]);
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [likedSongs, setLikedSongs] = useState([]);
@@ -37,6 +91,16 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playlists, setPlaylists] = useState([]);
   const [isShuffled, setIsShuffled] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "default");
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === "default" ? "galaxy" : "default");
+  }, []);
 
   React.useEffect(() => {
     const initApp = async () => {
@@ -85,61 +149,79 @@ export default function App() {
     }, 3000);
   }, []);
 
-  const handlePlay = useCallback(async (song, contextQueue) => {
+  const [recentlyPlayed, setRecentlyPlayed] = useState(() => {
+    try {
+      const saved = localStorage.getItem("recentlyPlayed");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("recentlyPlayed", JSON.stringify(recentlyPlayed));
+  }, [recentlyPlayed]);
+
+  const handlePlay = useCallback(async (song, contextQueue, forcePreview = false) => {
     const { resolveFullAudio } = await import("./services/musicApi");
 
-    if (currentSong?.id === song.id) {
+    // Track recently played
+    setRecentlyPlayed(prev => {
+      const filtered = prev.filter(s => s.id !== song.id);
+      return [song, ...filtered].slice(0, 20); // Keep last 20
+    });
+
+    if (currentSong?.id === song.id && !forcePreview) {
       setIsPlaying((p) => !p);
+      return;
+    }
+
+    // 1. Set the song in the queue context
+    if (contextQueue && contextQueue.length > 0) {
+      setQueue(contextQueue);
     } else {
-      // 1. Initial play with preview (instant)
-      setCurrentSong(song);
+      setQueue(prev => {
+        if (!prev.find(s => s.id === song.id)) return [...prev, song];
+        return prev;
+      });
+    }
+
+    // 2. Play logic
+    if (forcePreview) {
+      // Force 30s preview immediately
+      setCurrentSong({ ...song, isFullAudio: false });
       setIsPlaying(true);
-
-      // 2. Update queue: use context queue if provided, otherwise add song to existing queue
-      if (contextQueue && contextQueue.length > 0) {
-        setQueue(contextQueue);
-      } else {
-        setQueue(prev => {
-          if (!prev.find(s => s.id === song.id)) {
-            return [...prev, song];
-          }
-          return prev;
-        });
-      }
+      showToast(`🎵 Playing 30s Preview: ${song.title}`, "info", "⏱️");
+    } else {
+      const needsResolve = song.source === "itunes" || (song.source === "local" && !song.audio_file && !song.previewUrl?.includes('/media/'));
       
-      const msg = song.source === "itunes" 
-        ? `🎵 Playing Preview: Resolving full audio for "${song.title}"...` 
-        : `Now playing: ${song.title}`;
-      showToast(msg, "info", "✨");
-
-      // 3. Resolve Full Audio in background via yt-dlp backend
-      // Triggers for: all iTunes songs (needsFullAudio flag) OR local songs missing audio
-      const needsResolve = song.needsFullAudio || song.source === "itunes" || (song.source === "local" && !song.audio_file && !song.previewUrl?.includes('/media/'));
       if (needsResolve) {
+        showToast(`🔍 Resolving full audio for "${song.title}"...`, "info", "⏳");
+        // We set the song but maybe don't start playing yet, or play a loading state?
+        // Actually, let's set it so the player shows "Loading..."
+        setCurrentSong({ ...song, isLoading: true });
+        
         try {
           const fullAudioUrl = await resolve_with_timeout(
             resolveFullAudio(song.title, song.artist),
-            60000  // 60s timeout for slower connections / cold starts
+            30000
           );
-          
+
           if (fullAudioUrl) {
-            setCurrentSong(prev => {
-              if (prev?.id === song.id) {
-                return { ...prev, previewUrl: fullAudioUrl, isFullAudio: true, needsFullAudio: false };
-              }
-              return prev;
-            });
+            setCurrentSong({ ...song, previewUrl: fullAudioUrl, isFullAudio: true, isLoading: false });
+            setIsPlaying(true);
             showToast(`✨ Full song loaded: "${song.title}"`, "success", "🔥");
           } else {
-            // Backend couldn't resolve — keep playing the iTunes 30-sec preview
-            console.warn(`Backend resolution failed for "${song.title}". Falling back to 30s preview.`);
-            showToast(`⚠️ Full audio unavailable. Playing 30-sec preview for "${song.title}".`, "warning", "ℹ️");
+            showToast(`⚠️ Full audio unavailable. You can play the 30s preview instead.`, "warning", "ℹ️");
+            setCurrentSong({ ...song, isLoading: false }); // Stop loading
           }
         } catch (e) {
-          // Timeout or network error — keep playing preview silently
-          console.warn("Full audio resolution timed out, playing preview instead.");
-          showToast(`⏳ Resolution timed out. Playing preview for "${song.title}".`, "info", "⏱️");
+          showToast(`❌ Resolution timed out for "${song.title}"`, "error", "⏱️");
+          setCurrentSong({ ...song, isLoading: false });
         }
+      } else {
+        // Normal play for local/already resolved songs
+        setCurrentSong(song);
+        setIsPlaying(true);
+        showToast(`Now playing: ${song.title}`, "info", "🎵");
       }
     }
   }, [currentSong, showToast]);
@@ -190,25 +272,70 @@ export default function App() {
   const handleLike = useCallback(async (songId, songMetadata = null) => {
     // If it's an iTunes song, the ID will be large or we'll have metadata
     const isDbSong = Number.isInteger(songId) && songId < 1000000;
-    const isExternal = songMetadata || !isDbSong;
-
+    
     setLikedSongs((prev) => {
       const isLiked = prev.includes(songId);
       if (isLiked) {
         showToast("Removed from Liked Songs", "info", "💔");
         if (user) {
-          playlistService.toggleLike(songId, songMetadata).catch(console.error);
+          playlistService.toggleLike(songId, songMetadata)
+            .then(() => playlistService.getPlaylists())
+            .then(setPlaylists)
+            .catch(console.error);
         }
         return prev.filter((id) => id !== songId);
       } else {
         showToast("Added to Liked Songs!", "success", "❤️");
         if (user) {
-          playlistService.toggleLike(songId, songMetadata).catch(console.error);
+          playlistService.toggleLike(songId, songMetadata)
+            .then(() => playlistService.getPlaylists())
+            .then(setPlaylists)
+            .catch(console.error);
         }
         return [...prev, songId];
       }
     });
   }, [showToast, user]);
+
+  const handleVoiceCommand = useCallback(async (command) => {
+    switch (command.type) {
+      case 'PLAY':
+        setIsPlaying(true);
+        showToast("Playing...", "info", "▶️");
+        break;
+      case 'PAUSE':
+        setIsPlaying(false);
+        showToast("Paused", "info", "⏸️");
+        break;
+      case 'NEXT':
+        handleNext();
+        showToast("Skipping to next...", "info", "⏭️");
+        break;
+      case 'PREV':
+        handlePrev();
+        showToast("Going back...", "info", "⏮️");
+        break;
+      case 'SEARCH_AND_PLAY':
+        showToast(`Searching for "${command.query}"...`, "info", "🔍");
+        try {
+          const { searchMusic } = await import("./services/musicApi");
+          const results = await searchMusic(command.query);
+          if (results && results.length > 0) {
+            handlePlay(results[0], results);
+            showToast(`Playing "${results[0].title}"`, "success", "✨");
+          } else {
+            showToast(`Could not find "${command.query}"`, "warning", "❓");
+          }
+        } catch (e) {
+          console.error("Voice search failed:", e);
+          showToast("Search failed", "error", "❌");
+        }
+        break;
+      default:
+        break;
+    }
+  }, [handleNext, handlePrev, handlePlay, showToast]);
+
 
   const handleAddGenerated = useCallback((song) => {
     setGeneratedSongs((prev) => [song, ...prev]);
@@ -225,7 +352,7 @@ export default function App() {
     
     // Sync likes upon login
     const likedIds = await playlistService.getLikedSongIds();
-    setLikedSongs(likedIds);
+    setLikedSongs([...new Set(likedIds)]);
 
     // Sync playlists upon login
     const pl = await playlistService.getPlaylists();
@@ -248,6 +375,28 @@ export default function App() {
       setPlaylists(updated);
     } catch (err) {
       showToast("Could not add to playlist", "error", "❌");
+    }
+  }, [user, showToast]);
+
+  const handleCreatePlaylist = useCallback(async (name) => {
+    if (!user) {
+      showToast("Please login to create playlists", "warning", "👤");
+      setActivePage("auth");
+      return;
+    }
+
+    try {
+      const newPlaylist = await playlistService.createPlaylist(name);
+      showToast(`Playlist "${name}" created!`, "success", "📁");
+      
+      // Refresh playlists
+      const updated = await playlistService.getPlaylists();
+      setPlaylists(updated);
+      
+      // Switch to the new playlist page
+      setActivePage(`playlist_${newPlaylist.id}`);
+    } catch (err) {
+      showToast("Could not create playlist", "error", "❌");
     }
   }, [user, showToast]);
 
@@ -282,9 +431,10 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             playlists={playlists}
             onAddToPlaylist={handleAddToPlaylist}
+            recentlyPlayed={recentlyPlayed}
           />
         );
       case "search":
@@ -350,6 +500,7 @@ export default function App() {
           <AnimePage setIsPlaying={setIsPlaying} />
         );
       case "liked":
+        const likedPlaylist = playlists.find(p => p.name === "Liked Songs");
         return (
           <LikedSongsPage
             currentSong={currentSong}
@@ -357,7 +508,7 @@ export default function App() {
             onPlay={handlePlay}
             onLike={handleLike}
             likedSongs={likedSongs}
-            allSongs={queue}
+            allSongs={likedPlaylist?.songs || []}
           />
         );
       case "auth":
@@ -375,22 +526,39 @@ export default function App() {
   return (
     <>
       <div className="app-layout">
+        {theme === "galaxy" && <GalaxyBackground />}
+        
         {/* Sidebar */}
         <Sidebar
           activePage={activePage}
-          setActivePage={setActivePage}
+          setActivePage={handleNavigate}
           likedSongs={likedSongs}
           playlists={playlists}
           user={user}
           onLogout={handleLogout}
+          onCreatePlaylist={handleCreatePlaylist}
         />
 
         {/* Main Content */}
         <main className="app-main">
           <header className="topbar">
             <div className="topbar-nav-btns">
-              <button className="btn-icon" title="Back">←</button>
-              <button className="btn-icon" title="Forward">→</button>
+              <button 
+                className="btn-icon" 
+                title="Back" 
+                onClick={goBack} 
+                style={{ opacity: historyIndex > 0 ? 1 : 0.3, cursor: historyIndex > 0 ? "pointer" : "default" }}
+              >
+                ←
+              </button>
+              <button 
+                className="btn-icon" 
+                title="Forward" 
+                onClick={goForward}
+                style={{ opacity: historyIndex < history.length - 1 ? 1 : 0.3, cursor: historyIndex < history.length - 1 ? "pointer" : "default" }}
+              >
+                →
+              </button>
             </div>
             <div className="topbar-search">
               <span className="topbar-search-icon">🔍</span>
@@ -399,24 +567,33 @@ export default function App() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  if (activePage !== "search") setActivePage("search");
+                  if (activePage !== "search") handleNavigate("search");
                 }}
-                onFocus={() => setActivePage("search")}
+                onFocus={() => handleNavigate("search")}
               />
             </div>
             <div className="topbar-right">
+              <button
+                className="btn-icon"
+                title={`Switch to ${theme === "default" ? "Galaxy" : "Midnight"} Theme`}
+                onClick={toggleTheme}
+                style={{ fontSize: 20, marginRight: 8 }}
+              >
+                {theme === "default" ? "🌙" : "🌌"}
+              </button>
+              <VoiceControl onCommand={handleVoiceCommand} showToast={showToast} />
               {/* AI Badges */}
               <button
                 className="btn btn-secondary"
                 style={{ fontSize: 12, padding: "8px 14px" }}
-                onClick={() => setActivePage("mood")}
+                onClick={() => handleNavigate("mood")}
               >
                 🧠 AI Mood
               </button>
               <button
                 className="btn btn-primary"
                 style={{ fontSize: 12, padding: "8px 14px" }}
-                onClick={() => setActivePage("creator")}
+                onClick={() => handleNavigate("creator")}
               >
                 ✨ Create Song
               </button>

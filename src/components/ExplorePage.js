@@ -31,26 +31,6 @@ function SongCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLiked, cat
             {isCurrentSong && isPlaying ? "⏸" : "▶"}
           </button>
         </div>
-        {isCurrentSong && (
-          <div style={{
-            position: "absolute", top: 8, left: 8,
-            background: "rgba(0,0,0,0.7)", borderRadius: 99, padding: "2px 8px"
-          }}>
-            <div className="wave-bars" style={{ height: 14 }}>
-              <span/><span/><span/><span/>
-            </div>
-          </div>
-        )}
-        {song.previewUrl && (
-          <div style={{
-            position: "absolute", bottom: 8, left: 8,
-            background: "rgba(0,0,0,0.7)", borderRadius: 99,
-            padding: "2px 8px", fontSize: 10, fontWeight: 700,
-            color: categoryColor, letterSpacing: 0.5,
-          }}>
-            ▶ PREVIEW
-          </div>
-        )}
       </div>
 
       {/* Playlist ➕ button — outside song-card-art to avoid overflow:hidden clipping */}
@@ -87,7 +67,15 @@ function SongCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLiked, cat
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="song-card-title">{song.title}</div>
-          <div className="song-card-artist">{song.artist}</div>
+          <div className="song-card-artist">{typeof song.artist === 'object' ? song.artist.name : song.artist}</div>
+          {song.source === "itunes" && (
+            <button
+              className="btn-preview"
+              onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+            >
+              ▶ 30s PREVIEW
+            </button>
+          )}
         </div>
         <button
           className={`player-like-btn ${isLiked ? "liked" : ""}`}
@@ -387,7 +375,7 @@ export default function ExplorePage({ currentSong, isPlaying, onPlay, onLike, li
                     song={song}
                     isCurrentSong={currentSong?.id === song.id}
                     isPlaying={isPlaying}
-                    onPlay={(s) => onPlay(s, filteredSongs)}
+                    onPlay={(s, q, f) => onPlay(s, q || filteredSongs, f)}
                     onLike={onLike}
                     isLiked={likedSongs.includes(song.id)}
                     categoryColor={cat.color}

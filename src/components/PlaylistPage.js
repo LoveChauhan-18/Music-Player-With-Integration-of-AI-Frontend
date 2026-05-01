@@ -100,9 +100,9 @@ export default function PlaylistPage({ playlist, currentSong, isPlaying, onPlay,
                 ) : i + 1}
               </div>
               <div className="song-row-info">
-                {song.artwork ? (
+                {(song.artwork || song.artwork_url) ? (
                   <img 
-                    src={song.artwork} 
+                    src={song.artwork || song.artwork_url} 
                     alt={song.title} 
                     style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover", marginRight: 12 }} 
                   />
@@ -118,7 +118,21 @@ export default function PlaylistPage({ playlist, currentSong, isPlaying, onPlay,
                   <div className="song-row-artist">{artistName}</div>
                 </div>
               </div>
-              <div className="song-row-album">{song.album || "Single"}</div>
+              <div className="song-row-album" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {song.source === "itunes" && (
+                  <button
+                    className="btn-preview"
+                    onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+                    title="Play 30s Preview"
+                    style={{ height: 24, padding: "0 8px", fontSize: 9 }}
+                  >
+                    PREVIEW
+                  </button>
+                )}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {song.album || "Single"}
+                </span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
                 <button
                   className={`player-like-btn ${likedSongs.includes(song.id) ? "liked" : ""}`}

@@ -1,20 +1,20 @@
 import React from "react";
-import { PLAYLISTS } from "../data/songs";
+import { SONGS } from "../data/songs";
 
 const NAV_ITEMS = [
-  { id: "home", icon: "🏠", label: "Home" },
-  { id: "explore", icon: "🌍", label: "Explore" },
-  { id: "search", icon: "🔍", label: "Search" },
-  { id: "library", icon: "📚", label: "Your Library" },
-  { id: "mood", icon: "🧠", label: "AI Mood" },
-  { id: "creator", icon: "✨", label: "AI Creator" },
-  { id: "podcasts", icon: "🎙️", label: "Podcasts" },
-  { id: "cartoons", icon: "📺", label: "Cartoons" },
-  { id: "anime", icon: "🎌", label: "Anime" },
-  { id: "liked", icon: "❤️", label: "Liked Songs" },
+  { id: "home", icon: "🏠", label: "Home", color: "#1db954" },
+  { id: "explore", icon: "🌍", label: "Explore", color: "#a855f7" },
+  { id: "search", icon: "🔍", label: "Search", color: "#3b82f6" },
+  { id: "library", icon: "📚", label: "Your Library", color: "#f59e0b" },
+  { id: "mood", icon: "🧠", label: "AI Mood", color: "#ec4899" },
+  { id: "creator", icon: "✨", label: "AI Creator", color: "#10b981" },
+  { id: "podcasts", icon: "🎙️", label: "Podcasts", color: "#ef4444" },
+  { id: "cartoons", icon: "📺", label: "Cartoons", color: "#f43f5e" },
+  { id: "anime", icon: "🎌", label: "Anime", color: "#06b6d4" },
+  { id: "liked", icon: "❤️", label: "Liked Songs", color: "#ff2e2e" },
 ];
 
-export default function Sidebar({ activePage, setActivePage, likedSongs, playlists, user, onLogout }) {
+export default function Sidebar({ activePage, setActivePage, likedSongs, playlists, user, onLogout, onCreatePlaylist }) {
   const getPlaylistEmoji = (name) => {
     if (name.includes("Favourites") || name.includes("Liked")) return "❤️";
     if (name.includes("Workout")) return "💪";
@@ -70,10 +70,16 @@ export default function Sidebar({ activePage, setActivePage, likedSongs, playlis
               key={item.id}
               className={`nav-item ${activePage === item.id ? "active" : ""}`}
               onClick={() => setActivePage(item.id)}
+              style={activePage === item.id ? { 
+                background: `${item.color}22`, 
+                color: item.color,
+                borderLeft: `4px solid ${item.color}`,
+                paddingLeft: "12px"
+              } : {}}
             >
               <span className="nav-item-icon">{item.icon}</span>
               <span>{item.label}</span>
-              {item.id === "liked" && likedSongs.length > 0 && (
+              {item.id === "liked" && (
                 <span
                   style={{
                     marginLeft: "auto",
@@ -91,13 +97,29 @@ export default function Sidebar({ activePage, setActivePage, likedSongs, playlis
             </button>
           ))}
 
-          <span className="nav-section-label" style={{ marginTop: 16 }}>
-            Your Playlists
-          </span>
+          <div className="nav-section-header" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="nav-section-label">Your Playlists</span>
+            <button 
+              className="btn-icon" 
+              title="Create Playlist"
+              onClick={() => {
+                const name = prompt("Enter playlist name:");
+                if (name && name.trim()) onCreatePlaylist(name.trim());
+              }}
+              style={{ padding: 4 }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
         </nav>
 
         <div className="sidebar-playlists">
-          {playlists.map((pl) => {
+          {playlists
+            .filter((pl) => pl.name !== "Liked Songs")
+            .map((pl) => {
             const emoji = getPlaylistEmoji(pl.name);
             const color = getPlaylistColor(pl.name);
             return (

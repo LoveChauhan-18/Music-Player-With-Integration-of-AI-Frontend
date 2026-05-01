@@ -30,24 +30,6 @@ function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLi
             {isCurrentSong && isPlaying ? "⏸" : "▶"}
           </button>
         </div>
-        {isCurrentSong && (
-          <div style={{
-            position: "absolute", top: 8, right: 8,
-            background: "rgba(0,0,0,0.7)", borderRadius: 99, padding: "2px 8px"
-          }}>
-            <div className="wave-bars" style={{ height: 14 }}>
-              <span/><span/><span/><span/>
-            </div>
-          </div>
-        )}
-        <div style={{
-          position: "absolute", bottom: 8, left: 8,
-          background: "rgba(0,0,0,0.7)", borderRadius: 99,
-          padding: "2px 8px", fontSize: 10, fontWeight: 700,
-          color: "var(--accent-purple)", letterSpacing: 0.5,
-        }}>
-          iTunes
-        </div>
       </div>
 
       {/* Playlist ➕ button — outside song-card-art to avoid overflow:hidden clipping */}
@@ -85,6 +67,14 @@ function SearchResultCard({ song, isCurrentSong, isPlaying, onPlay, onLike, isLi
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="song-card-title">{song.title}</div>
           <div className="song-card-artist">{song.artist}</div>
+          {song.source === "itunes" && (
+            <button
+              className="btn-preview"
+              onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+            >
+              ▶ 30s PREVIEW
+            </button>
+          )}
         </div>
         <button
           className={`player-like-btn ${isLiked ? "liked" : ""}`}

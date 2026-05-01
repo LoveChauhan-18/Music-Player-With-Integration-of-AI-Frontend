@@ -164,7 +164,7 @@ export async function fetchLocalLibrary() {
     const res = await fetch(LOCAL_API_URL);
     if (!res.ok) throw new Error("Local API unreachable");
     const data = await res.json();
-    return data.map((track) => ({
+    const normalized = data.map((track) => ({
       id: track.id,
       title: track.title,
       artist: track.artist?.name || "Unknown Artist",
@@ -181,6 +181,7 @@ export async function fetchLocalLibrary() {
       color: "#10b981",
       source: "local",
     }));
+    return dedupe(normalized);
   } catch (e) {
     console.error("Local Library fetch error:", e);
     return [];
@@ -299,10 +300,18 @@ export async function generateAIVocal(text, voiceId) {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function dedupe(arr) {
-  const seen = new Set();
+  const seenIds = new Set();
+  const seenNames = new Set();
   return arr.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
+    // Dedupe by ID
+    if (item.id && seenIds.has(item.id)) return false;
+    if (item.id) seenIds.add(item.id);
+
+    // Dedupe by Title + Artist (Semantic)
+    const semanticKey = `${item.title?.toLowerCase()}|${item.artist?.toLowerCase()}`;
+    if (seenNames.has(semanticKey)) return false;
+    seenNames.add(semanticKey);
+
     return true;
   });
 }

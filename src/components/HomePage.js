@@ -19,8 +19,8 @@ function SongRow({ song, index, isPlaying, isCurrentSong, onPlay, onLike, isLike
         )}
       </div>
       <div className="song-row-info">
-        {song.artwork ? (
-          <img src={song.artwork} alt="" className="song-row-thumb" style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover" }} />
+        {(song.artwork || song.artwork_url) ? (
+          <img src={song.artwork || song.artwork_url} alt="" className="song-row-thumb" style={{ width: 40, height: 40, borderRadius: 4, objectFit: "cover" }} />
         ) : (
           <div className="song-row-thumb-placeholder" style={{
             background: `linear-gradient(135deg, ${song.color || '#333'}88, ${song.color || '#333'}33)`,
@@ -30,10 +30,24 @@ function SongRow({ song, index, isPlaying, isCurrentSong, onPlay, onLike, isLike
         )}
         <div>
           <div className="song-row-name">{song.title}</div>
-          <div className="song-row-artist">{song.artist}</div>
+          <div className="song-row-artist">{typeof song.artist === 'object' ? song.artist.name : song.artist}</div>
         </div>
       </div>
-      <div className="song-row-album">{song.album}</div>
+      <div className="song-row-album" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {song.source === "itunes" && (
+          <button
+            className="btn-preview"
+            style={{ height: 24, padding: "0 8px", fontSize: 9 }}
+            onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+            title="Play 30s Preview"
+          >
+            PREVIEW
+          </button>
+        )}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {song.album}
+        </span>
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
         <div style={{ position: "relative" }}>
           <button 
@@ -75,7 +89,17 @@ function SongRow({ song, index, isPlaying, isCurrentSong, onPlay, onLike, isLike
   );
 }
 
-export default function HomePage({ currentSong, isPlaying, onPlay, onLike, likedSongs, setActivePage, playlists, onAddToPlaylist }) {
+export default function HomePage({ 
+  currentSong, 
+  isPlaying, 
+  onPlay, 
+  onLike, 
+  likedSongs, 
+  setActivePage, 
+  playlists, 
+  onAddToPlaylist,
+  recentlyPlayed = []
+}) {
   const [activeSongMenu, setActiveSongMenu] = useState(null); // ID of song showing menu
   const [latestSongs, setLatestSongs] = useState([]);
   const [localLib, setLocalLib] = useState([]);
@@ -97,7 +121,6 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
   }, []);
 
   const trending = [...localLib].sort((a, b) => b.plays - a.plays).slice(0, 6);
-  const recent = [...localLib].slice(-8).reverse();
 
   return (
     <div className="page">
@@ -141,7 +164,7 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
             <div
               key={song.id}
               className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
-              onClick={() => onPlay(song, latestSongs)}
+               onClick={() => onPlay(song, latestSongs, false)}
               style={{ overflow: activeSongMenu === song.id ? "visible" : undefined }}
             >
               <div className="song-card-art">
@@ -197,7 +220,15 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
               </div>
 
               <div className="song-card-title">{song.title}</div>
-              <div className="song-card-artist">{song.artist}</div>
+              <div className="song-card-artist">{typeof song.artist === 'object' ? song.artist.name : song.artist}</div>
+              {song.source === "itunes" && (
+                <button
+                  className="btn-preview"
+                  onClick={(e) => { e.stopPropagation(); onPlay(song, [], true); }}
+                >
+                  ▶ 30s PREVIEW
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -230,7 +261,7 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
           <div
             key={song.id}
             className={`song-card ${currentSong?.id === song.id ? "playing" : ""}`}
-            onClick={() => onPlay(song, trending)}
+             onClick={() => onPlay(song, trending, false)}
           >
             <div className="song-card-art">
               <div className="song-card-art-placeholder" style={{
@@ -272,33 +303,43 @@ export default function HomePage({ currentSong, isPlaying, onPlay, onLike, liked
         ))}
       </div>
 
-      {/* Recent */}
+      {/* Recently Played */}
       <div className="section-header">
-        <h2 className="section-title">🕐 Recently Added</h2>
+        <h2 className="section-title">🕒 Recently Played</h2>
       </div>
-      <div className="song-row" style={{ cursor: "default", opacity: 0.5, marginBottom: 4 }}>
-        <div className="song-row-num">#</div>
-        <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Title</div>
-        <div className="song-row-album" style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Album</div>
-        <div style={{ textAlign: "right", fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Duration</div>
-      </div>
-      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 8 }} />
-      <div className="song-list">
-        {recent.map((song, i) => (
-          <SongRow
-            key={song.id}
-            song={song}
-            index={i}
-            isPlaying={isPlaying}
-            isCurrentSong={currentSong?.id === song.id}
-            onPlay={(s) => onPlay(s, recent)}
-            onLike={onLike}
-            isLiked={likedSongs.includes(song.id)}
-            playlists={playlists}
-            onAddToPlaylist={onAddToPlaylist}
-          />
-        ))}
-      </div>
+      
+      {recentlyPlayed.length > 0 ? (
+        <>
+          <div className="song-row" style={{ cursor: "default", opacity: 0.5, marginBottom: 4 }}>
+            <div className="song-row-num">#</div>
+            <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Title</div>
+            <div className="song-row-album" style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Album</div>
+            <div style={{ textAlign: "right", fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Duration</div>
+          </div>
+          <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 8 }} />
+          <div className="song-list">
+            {recentlyPlayed.map((song, i) => (
+              <SongRow
+                key={`${song.id}-${i}`}
+                song={song}
+                index={i}
+                isPlaying={isPlaying}
+                isCurrentSong={currentSong?.id === song.id}
+                 onPlay={(s, q, f) => onPlay(s, q || recentlyPlayed, f)}
+                onLike={onLike}
+                isLiked={likedSongs.includes(song.id)}
+                playlists={playlists}
+                onAddToPlaylist={onAddToPlaylist}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="empty-state" style={{ padding: "40px 20px", background: "rgba(255,255,255,0.02)", borderRadius: 16 }}>
+          <span style={{ fontSize: 32, marginBottom: 12, display: "block" }}>🎧</span>
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Your play history will appear here. Start listening to music!</p>
+        </div>
+      )}
     </div>
   );
 }

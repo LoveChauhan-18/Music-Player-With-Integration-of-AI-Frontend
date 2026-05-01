@@ -53,5 +53,15 @@ export const playlistService = {
       headers: getAuthHeaders(),
     });
     return response.data;
+  },
+
+  // Create a new playlist
+  createPlaylist: async (name) => {
+    const response = await axios.post(`${API_URL}/playlists/`, {
+      name: name
+    }, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
   }
 };
