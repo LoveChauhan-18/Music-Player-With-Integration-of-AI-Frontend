@@ -6,70 +6,84 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0); // 0=off 1=all 2=one
-  
   const [duration, setDuration] = useState(currentSong?.duration || 200);
-  
+
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
+  const canPlayListenerRef = useRef(null);
 
-  // Reset progress when song changes
+  // ─── Effect 1: Reset progress when the SONG changes (id changes) ───────────
   useEffect(() => {
     setProgress(0);
     setDuration(currentSong?.duration || 200);
+
+    // Clean up any previous canplay listener
+    if (audioRef.current && canPlayListenerRef.current) {
+      audioRef.current.removeEventListener('canplay', canPlayListenerRef.current);
+      canPlayListenerRef.current = null;
+    }
   }, [currentSong?.id]);
 
-  // Handle Play/Pause and URL changes
+  // ─── Effect 2: Handle audio URL changes (preview → full audio swap) ─────────
   useEffect(() => {
-    if (audioRef.current) {
-      const audio = audioRef.current;
-      const prevTime = audio.currentTime;
+    const audio = audioRef.current;
+    if (!audio || !currentSong?.previewUrl) return;
 
-      if (isPlaying) {
-        // Function to restore position and play once new URL metadata is loaded
-        const handleMetadata = () => {
-          if (prevTime > 0) {
-            audio.currentTime = prevTime;
-          }
-          audio.play().catch(e => console.log("Playback error:", e));
-          audio.removeEventListener('loadedmetadata', handleMetadata);
-        };
-
-        // When the previewUrl changes, explicitly reload the audio element
-        if (currentSong?.previewUrl) {
-          audio.addEventListener('loadedmetadata', handleMetadata);
-          audio.load(); // Trigger reload for the new src
-          audio.play().catch(e => {
-            // Play might fail if load() is still in progress, but handleMetadata will catch it
-            console.log("Initial play attempt:", e);
-          });
-        }
-      } else {
-        audio.pause();
-      }
+    // Remove any existing pending canplay listener
+    if (canPlayListenerRef.current) {
+      audio.removeEventListener('canplay', canPlayListenerRef.current);
+      canPlayListenerRef.current = null;
     }
-  }, [isPlaying, currentSong?.id, currentSong?.previewUrl]);
 
-  // Sync Progress for both Real and Simulated Audio
-  useEffect(() => {
-    if (!currentSong) return;
-    
-    setDuration(currentSong.duration || 200);
+    // Set the new source and reload
+    audio.src = currentSong.previewUrl;
+    audio.load();
 
     if (isPlaying) {
-      if (!currentSong.previewUrl) {
-        // Simulation for sample data
-        intervalRef.current = setInterval(() => {
-          setProgress((prev) => {
-            const next = prev + 1;
-            if (next >= duration) {
-              clearInterval(intervalRef.current);
-              onNext();
-              return 0;
-            }
-            return next;
-          });
-        }, 1000);
+      // Wait for the browser to have enough data before playing
+      const onCanPlay = () => {
+        audio.play().catch(e => console.log("Play after URL change:", e));
+        audio.removeEventListener('canplay', onCanPlay);
+        canPlayListenerRef.current = null;
+      };
+      canPlayListenerRef.current = onCanPlay;
+      audio.addEventListener('canplay', onCanPlay);
+    }
+  }, [currentSong?.previewUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Effect 3: Handle play/pause toggling ───────────────────────────────────
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentSong?.previewUrl) return;
+
+    if (isPlaying) {
+      // If audio is already loaded and ready, play immediately
+      if (audio.readyState >= 2) {
+        audio.play().catch(e => console.log("Play/pause effect error:", e));
       }
+      // Otherwise Effect 2's canplay listener will handle it
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying, currentSong?.previewUrl]);
+
+  // ─── Effect 4: Simulated progress for songs without real audio ──────────────
+  useEffect(() => {
+    if (!currentSong) return;
+    setDuration(currentSong.duration || 200);
+
+    if (isPlaying && !currentSong.previewUrl) {
+      intervalRef.current = setInterval(() => {
+        setProgress((prev) => {
+          const next = prev + 1;
+          if (next >= (currentSong.duration || 200)) {
+            clearInterval(intervalRef.current);
+            onNext();
+            return 0;
+          }
+          return next;
+        });
+      }, 1000);
     } else {
       clearInterval(intervalRef.current);
     }
@@ -77,7 +91,14 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     return () => clearInterval(intervalRef.current);
   }, [isPlaying, currentSong, onNext]);
 
-  // Handle Real Audio Time Update
+  // ─── Effect 5: Volume / Mute sync ───────────────────────────────────────────
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume / 100;
+    }
+  }, [isMuted, volume]);
+
+  // ─── Audio event handlers ───────────────────────────────────────────────────
   const handleTimeUpdate = () => {
     if (audioRef.current && currentSong?.previewUrl) {
       setProgress(audioRef.current.currentTime);
@@ -93,13 +114,12 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   const handleAudioError = (e) => {
     console.error("Audio playback error:", e);
     if (currentSong?.isFullAudio) {
-      // Full audio failed to load — log it, don't block the user with an alert
       console.warn(`Full audio for "${currentSong.title}" could not be loaded.`);
     }
   };
 
   const handleEnded = () => {
-    if (repeatMode === 2) { // Repeat one
+    if (repeatMode === 2) {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play();
@@ -109,7 +129,7 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     }
   };
 
-  // Seek
+  // ─── Seek ───────────────────────────────────────────────────────────────────
   const handleSeek = (e) => {
     const val = Number(e.target.value);
     setProgress(val);
@@ -118,7 +138,7 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     }
   };
 
-  // Volume
+  // ─── Volume ──────────────────────────────────────────────────────────────────
   const handleVolumeChange = (e) => {
     const val = Number(e.target.value);
     setVolume(val);
@@ -129,17 +149,14 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
     else setIsMuted(false);
   };
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume / 100;
-    }
-  }, [isMuted, volume]);
-
   const toggleMute = () => setIsMuted((m) => !m);
 
+  // ─── No song selected ────────────────────────────────────────────────────────
   if (!currentSong) {
     return (
       <footer className="player" style={{ justifyContent: "center" }}>
+        {/* Always mount audio element so ref is always valid */}
+        <audio ref={audioRef} />
         <div style={{ color: "var(--text-muted)", fontSize: 14 }}>
           🎵 Select a song to start playing
         </div>
@@ -152,17 +169,15 @@ export default function Player({ currentSong, isPlaying, setIsPlaying, onNext, o
   return (
     <footer className="player" style={{ "--player-color": currentSong.color || "var(--accent-purple)" }}>
       <div className="player-ambient-glow" style={{ opacity: isPlaying ? 0.2 : 0.05 }} />
-      {/* Hidden Audio Element */}
-      {currentSong.previewUrl && (
-        <audio
-          ref={audioRef}
-          src={currentSong.previewUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-          onError={handleAudioError}
-        />
-      )}
+
+      {/* Always-mounted Audio Element — src managed imperatively via useEffect */}
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleEnded}
+        onError={handleAudioError}
+      />
 
       {/* Now Playing Info */}
       <div className="player-info">
